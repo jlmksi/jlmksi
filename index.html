@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>식당 키오스크</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f8f8;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #4CAF50;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1em 2em;
+        }
+        .container {
+            display: flex;
+            width: 100%;
+        }
+        .menu-container {
+            flex: 4;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 1em;
+        }
+        .menu-item {
+            background-color: white;
+            border: 1px solid #ddd;
+            margin: 0.5em;
+            padding: 0.5em;
+            width: calc(15% - 1em);
+            text-align: center;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            cursor: pointer;
+            position: relative;
+            height: 150px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .menu-item button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 0.3em;
+            cursor: pointer;
+            font-size: 1.2em;
+        }
+        .menu-item p {
+            margin: 0.5em 0;
+        }
+        .edit-button, .delete-button {
+            background-color: #555;
+            font-size: 0.5em;
+            padding: 0.2em;
+            margin: 0.2em 0;
+        }
+        .order-summary {
+            flex: 1;
+            background-color: #fff;
+            border-left: 1px solid #ddd;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            padding: 1em;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+        }
+        .order-summary h2 {
+            text-align: center;
+        }
+        .order-summary ul {
+            list-style: none;
+            padding: 0;
+        }
+        .order-summary ul li {
+            padding: 0.5em 0;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .total-price {
+            text-align: center;
+            font-size: 1.2em;
+            margin-top: 1em;
+        }
+        .quantity-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.5em;
+        }
+        .quantity-controls button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 0.5em;
+            cursor: pointer;
+        }
+        .add-menu-button, .save-menu-button {
+            background-color: white;
+            color: #4CAF50;
+            border: 2px solid #4CAF50;
+            padding: 0.5em 1em;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        .finalize-order-button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 1em;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 1em;
+            font-size: 1.2em;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>식당 키오스크</h1>
+        <div>
+            <button class="save-menu-button" onclick="saveMenu()">메뉴 저장</button>
+            <button class="add-menu-button" onclick="addMenuItem()">메뉴 추가</button>
+        </div>
+    </header>
+    <div class="container">
+        <main class="menu-container" id="menuContainer"></main>
+        <aside class="order-summary">
+            <h2>주문 현황</h2>
+            <ul id="orderList"></ul>
+            <div class="total-price" id="totalPrice">총 금액: 0원</div>
+            <button class="finalize-order-button" onclick="finalizeOrder()">주문 결정</button>
+        </aside>
+    </div>
+    <script>
+        const menuContainer = document.getElementById('menuContainer');
+        const orderList = document.getElementById('orderList');
+        const totalPriceElement = document.getElementById('totalPrice');
+        let totalPrice = 0;
+        const orders = {};
+        let menu = JSON.parse(localStorage.getItem('menu')) || [
+            { name: '메뉴1', price: 10000 },
+            { name: '메뉴2', price: 12000 },
+            { name: '메뉴3', price: 15000 }
+        ];
+
+        // Render에서 제공하는 WebSocket 서버 URL로 변경
+        const ws = new WebSocket('wss://restaurant-order-cmeo.onrender.com');
+
+        function formatPrice(price) {
+            return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';
+        }
+
+        function renderMenu() {
+            menuContainer.innerHTML = '';
+            menu.forEach(item => {
+                const menuItem = document.createElement('div');
+                menuItem.className = 'menu-item';
+                menuItem.setAttribute('data-name', item.name);
+                menuItem.setAttribute('data-price', item.price);
+                menuItem.setAttribute('onclick', `orderItem('${item.name}', ${item.price})`);
+                menuItem.innerHTML = `
+                    <button>${item.name}</button>
+                    <p>${formatPrice(item.price)}</p>
+                    <div>
+                        <button class="edit-button" onclick="editItem(event, this)">메뉴 수정</button>
+                        <button class="delete-button" onclick="deleteMenuItem(event, '${item.name}')">메뉴 삭제</button>
+                    </div>
+                `;
+                menuContainer.appendChild(menuItem);
+            });
+        }
+
+        function orderItem(name, price) {
+            if (!orders[name]) {
+                orders[name] = { price: price, quantity: 0 };
+                addOrderToList(name);
+            }
+            orders[name].quantity++;
+            updateOrderList();
+            totalPrice += price;
+            updateTotalPrice();
+        }
+
+        function addOrderToList(name) {
+            const listItem = document.createElement('li');
+            listItem.id = `order-${name}`;
+            listItem.innerHTML = `
+                <span>${name} - ${formatPrice(orders[name].price)}</span>
+                <div class="quantity-controls">
+                    <button class="delete-button" onclick="deleteItem('${name}')">지우기</button>
+                    <button onclick="updateQuantity('${name}', -1)">-</button>
+                    <span id="quantity-${name}">0</span>
+                    <button onclick="updateQuantity('${name}', 1)">+</button>
+                </div>
+            `;
+            orderList.appendChild(listItem);
+        }
+
+        function updateQuantity(name, change) {
+            const newQuantity = orders[name].quantity + change;
+            if (newQuantity >= 0) {
+                totalPrice += orders[name].price * change;
+                orders[name].quantity = newQuantity;
+                document.getElementById(`quantity-${name}`).textContent = newQuantity;
+                if (newQuantity === 0) {
+                    document.getElementById(`order-${name}`).remove();
+                    delete orders[name];
+                }
+                updateTotalPrice();
+            }
+        }
+
+        function deleteItem(name) {
+            totalPrice -= orders[name].price * orders[name].quantity;
+            document.getElementById(`order-${name}`).remove();
+            delete orders[name];
+            updateTotalPrice();
+        }
+
+        function updateOrderList() {
+            for (const name in orders) {
+                document.getElementById(`quantity-${name}`).textContent = orders[name].quantity;
+            }
+        }
+
+        function updateTotalPrice() {
+            totalPriceElement.textContent = `총 금액: ${formatPrice(totalPrice)}`;
+        }
+
+        function editItem(event, button) {
+            event.stopPropagation();
+            const menuItem = button.parentElement.parentElement;
+            const name = menuItem.getAttribute('data-name');
+            const price = menuItem.getAttribute('data-price');
+            const newName = prompt('새로운 메뉴 이름을 입력하세요:', name);
+            const newPrice = prompt('새로운 가격을 입력하세요:', price);
+
+            if (newName && newPrice) {
+                menuItem.setAttribute('data-name', newName);
+                menuItem.setAttribute('data-price', newPrice);
+                menuItem.querySelector('button').textContent = newName;
+                menuItem.querySelector('p').textContent = formatPrice(newPrice);
+                menuItem.setAttribute('onclick', `orderItem('${newName}', ${newPrice})`);
+
+                const index = menu.findIndex(item => item.name === name);
+                menu[index] = { name: newName, price: parseInt(newPrice) };
+            }
+        }
+
+        function deleteMenuItem(event, name) {
+            event.stopPropagation();
+            if (confirm('삭제하시겠습니까?')) {
+                const index = menu.findIndex(item => item.name === name);
+                menu.splice(index, 1);
+                renderMenu();
+            }
+        }
+
+        function addMenuItem() {
+            const newName = prompt('새로운 메뉴 이름을 입력하세요:');
+            const newPrice = prompt('새로운 가격을 입력하세요:');
+            if (newName && newPrice) {
+                menu.push({ name: newName, price: parseInt(newPrice) });
+                renderMenu();
+            }
+        }
+
+        function saveMenu() {
+            localStorage.setItem('menu', JSON.stringify(menu));
+            alert('메뉴가 저장되었습니다');
+        }
+
+        function finalizeOrder() {
+            const tableNumber = prompt('테이블 번호를 입력하세요:');
+            if (tableNumber) {
+                let orderSummary = `테이블 번호: ${tableNumber}\n\n`;
+                let totalQuantity = 0;
+                for (const name in orders) {
+                    orderSummary += `${name}: ${orders[name].quantity}개\n`;
+                    totalQuantity += orders[name].quantity;
+                }
+                orderSummary += `\n총 금액: ${formatPrice(totalPrice)}`;
+                const confirmOrder = confirm(`${orderSummary}\n\n주문을 완료하시겠습니까?`);
+                if (confirmOrder) {
+                    alert('주문이 완료되었습니다');
+                    saveOrder(tableNumber, orders, totalPrice);
+                    ws.send(JSON.stringify({ tableNumber, orders, totalPrice })); // Send order to WebSocket server
+                    location.reload(); // Reset the page after order is completed
+                }
+            }
+        }
+
+        function saveOrder(tableNumber, orders, totalPrice) {
+            const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+            savedOrders.push({ tableNumber, orders, totalPrice });
+            localStorage.setItem('savedOrders', JSON.stringify(savedOrders));
+        }
+
+        renderMenu();
+    </script>
+</body>
+</html>

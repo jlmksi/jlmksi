@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>식당 관리 페이지</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f8f8;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #4CAF50;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1em 2em;
+        }
+        .container {
+            display: flex;
+            width: 100%;
+        }
+        .order-container {
+            flex: 1;
+            padding: 1em;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .order-item {
+            background-color: white;
+            border: 1px solid #ddd;
+            margin: 0.5em;
+            padding: 1em;
+            width: calc(25% - 1em);
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .order-item h3 {
+            margin: 0 0 0.5em 0;
+            font-size: 1.2em;
+        }
+        .order-item p {
+            margin: 0.3em 0;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+        .complete-button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 0.5em 1em;
+            cursor: pointer;
+            margin-top: 1em;
+            width: 100%;
+            font-size: 1em;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>주문 관리</h1>
+    </header>
+    <div class="container">
+        <div class="order-container" id="orderContainer"></div>
+    </div>
+    <script>
+        const orderContainer = document.getElementById('orderContainer');
+        const ws = new WebSocket('wss://restaurant-order-cmeo.onrender.com');
+
+        ws.onmessage = (event) => {
+            const order = JSON.parse(event.data);
+            alert('새로운 주문이 들어왔습니다!');
+            loadOrders();
+        };
+
+        function loadOrders() {
+            const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+            orderContainer.innerHTML = '';
+            savedOrders.forEach((order, index) => {
+                const orderItem = document.createElement('div');
+                orderItem.className = 'order-item';
+                let orderDetails = `<h3>테이블 번호: ${order.tableNumber}</h3>`;
+                for (const name in order.orders) {
+                    orderDetails += `<p>${name}: ${order.orders[name].quantity}개</p>`;
+                }
+                orderItem.innerHTML = orderDetails;
+                const completeButton = document.createElement('button');
+                completeButton.className = 'complete-button';
+                completeButton.textContent = '완료';
+                completeButton.onclick = () => completeOrder(index);
+                orderItem.appendChild(completeButton);
+                orderContainer.appendChild(orderItem);
+            });
+        }
+
+        function completeOrder(index) {
+            if (confirm('삭제하시겠습니까?')) {
+                let savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+                savedOrders.splice(index, 1);
+                localStorage.setItem('savedOrders', JSON.stringify(savedOrders));
+                loadOrders();
+            }
+        }
+
+        loadOrders();
+    </script>
+</body>
+</html>
