@@ -71,7 +71,7 @@
     </div>
     <script>
         const orderContainer = document.getElementById('orderContainer');
-        const ws = new WebSocket('wss://restaurant-order-cmeo.onrender.com');
+        const ws = new WebSocket('wss://restaurant-order-1.onrender.com');
 
         ws.onmessage = (event) => {
             const order = JSON.parse(event.data);
