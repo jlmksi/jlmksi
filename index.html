@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>식당 키오스크</title>
+    <title>세광교회 바자회 식당 키오스크</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -32,7 +32,7 @@
             padding: 1em;
         }
         .menu-item {
-            background-color: #4CAF50; /* 메뉴 박스를 녹색으로 변경 */
+            background-color: white; /* 메뉴 박스를 흰색으로 변경 */
             border: 1px solid #ddd;
             border-radius: 10px;
             margin: 0.5em;
@@ -49,25 +49,25 @@
         }
         .menu-item button {
             background-color: transparent;
-            color: white;
+            color: #4CAF50; /* 메뉴 글씨 색상 */
             border: none;
             padding: 0.3em;
             cursor: pointer;
-            font-size: 1.2em;
+            font-size: 1.5em; /* 메뉴 글씨 크기를 키움 */
         }
         .menu-item p {
             margin: 0.5em 0;
-            color: white;
+            color: #4CAF50; /* 메뉴 가격 색상 */
             font-size: 1.2em;
         }
         .edit-button, .delete-button {
-            background-color: white !important; /* 메뉴 수정, 삭제 버튼을 하얀색으로 변경 */
-            color: #4CAF50 !important; /* 버튼 텍스트 색상을 녹색으로 변경 */
+            background-color: #4CAF50 !important; /* 메뉴 수정, 삭제 버튼을 초록색으로 변경 */
+            color: white !important;
             font-size: 0.8em !important; /* '가격' 글씨 크기보다 3포인트 작게 설정 */
             padding: 0.2em 0.4em !important;
             margin: 0.2em 0 !important;
             border-radius: 3px !important;
-            border: 1px solid #4CAF50 !important; /* 버튼 테두리를 녹색으로 변경 */
+            border: none !important;
             display: inline-block !important;
         }
         .order-summary {
@@ -157,7 +157,7 @@
 </head>
 <body>
     <header>
-        <h1>식당 키오스크</h1>
+        <h1>세광교회 바자회 키오스크</h1>
         <div>
             <a href="restaurant.html" class="manage-link">📋</a>
             <button class="save-menu-button" onclick="saveMenu()">메뉴 저장</button>
