@@ -10,6 +10,7 @@
             background-color: #f8f8f8;
             margin: 0;
             padding: 0;
+            position: relative;
         }
         header {
             background-color: #4CAF50;
@@ -18,6 +19,7 @@
             justify-content: space-between;
             align-items: center;
             padding: 1em 2em;
+            border-radius: 0 0 10px 10px;
         }
         .container {
             display: flex;
@@ -33,6 +35,7 @@
         .menu-item {
             background-color: white;
             border: 1px solid #ddd;
+            border-radius: 10px;
             margin: 0.5em;
             padding: 0.5em;
             width: calc(15% - 1em);
@@ -52,6 +55,7 @@
             padding: 0.3em;
             cursor: pointer;
             font-size: 1.2em;
+            border-radius: 5px;
         }
         .menu-item p {
             margin: 0.5em 0;
@@ -61,11 +65,13 @@
             font-size: 0.5em;
             padding: 0.2em;
             margin: 0.2em 0;
+            border-radius: 5px;
         }
         .order-summary {
             flex: 1;
             background-color: #fff;
             border-left: 1px solid #ddd;
+            border-radius: 10px;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
             padding: 1em;
             position: sticky;
@@ -103,6 +109,7 @@
             border: none;
             padding: 0.5em;
             cursor: pointer;
+            border-radius: 5px;
         }
         .add-menu-button, .save-menu-button {
             background-color: white;
@@ -111,6 +118,7 @@
             padding: 0.5em 1em;
             cursor: pointer;
             font-size: 1em;
+            border-radius: 5px;
         }
         .finalize-order-button {
             background-color: #4CAF50;
@@ -121,6 +129,25 @@
             width: 100%;
             margin-top: 1em;
             font-size: 1.2em;
+            border-radius: 5px;
+        }
+        .manage-link {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px;
+            border-radius: 50%;
+            text-align: center;
+            width: 50px;
+            height: 50px;
+            line-height: 30px;
+            text-decoration: none;
+            font-size: 1.5em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
     </style>
 </head>
@@ -141,6 +168,7 @@
             <button class="finalize-order-button" onclick="finalizeOrder()">주문 결정</button>
         </aside>
     </div>
+    <a href="restaurant.html" class="manage-link">📋</a>
     <script>
         const menuContainer = document.getElementById('menuContainer');
         const orderList = document.getElementById('orderList');
@@ -153,7 +181,6 @@
             { name: '메뉴3', price: 15000 }
         ];
 
-        // Render에서 제공하는 WebSocket 서버 URL로 변경
         const ws = new WebSocket('wss://restaurant-order-1.onrender.com');
 
         function formatPrice(price) {
