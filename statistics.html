@@ -62,12 +62,10 @@
             let totalItemsSold = 0;
             let totalRevenue = 0;
 
-            data.orders.forEach(order => {
-                for (const name in order.orders) {
-                    totalItemsSold += order.orders[name].quantity;
-                    totalRevenue += order.orders[name].price * order.orders[name].quantity;
-                }
-            });
+            for (const name in data.orders) {
+                totalItemsSold += data.orders[name].quantity;
+                totalRevenue += data.orders[name].price * data.orders[name].quantity;
+            }
 
             document.getElementById('totalItemsSold').textContent = `총 판매 개수: ${totalItemsSold}`;
             document.getElementById('totalRevenue').textContent = `총 매출: ${totalRevenue.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}원`;
