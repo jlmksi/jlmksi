@@ -10,18 +10,27 @@ const server = http.createServer((req, res) => {
 // Create a WebSocket server
 const wss = new WebSocket.Server({ server });
 
+let savedOrders = [];
+
 wss.on('connection', (ws) => {
   console.log('Client connected');
 
   ws.on('message', (message) => {
     console.log('Received:', message);
+    const data = JSON.parse(message);
 
-    // Broadcast the message to all clients
-    wss.clients.forEach((client) => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(message);
-      }
-    });
+    if (data.request && data.request === 'savedOrders') {
+      ws.send(JSON.stringify(savedOrders));
+    } else {
+      savedOrders.push(data);
+
+      // Broadcast the message to all clients
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify(savedOrders));
+        }
+      });
+    }
   });
 
   ws.on('close', () => {
