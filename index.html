@@ -15,166 +15,118 @@
             background-color: #4CAF50;
             color: white;
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             align-items: center;
-            padding: 0.3em 2em;
+            padding: 1em 2em;
             border-radius: 0 0 10px 10px;
-            position: relative;
         }
         .container {
             display: flex;
             width: 100%;
         }
         .menu-container {
-            flex: 4;
+            flex: 3;
+            padding: 1em;
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
-            padding: 1em;
         }
         .menu-item {
             background-color: white;
             border: 1px solid #ddd;
-            border-radius: 10px;
             margin: 0.5em;
-            padding: 0.5em;
-            width: calc(15% - 1em);
-            text-align: center;
+            padding: 1em;
+            width: calc(20% - 1em);
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            cursor: pointer;
-            position: relative;
-            height: 150px;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
         }
         .menu-item button {
-            background-color: transparent;
-            color: #4CAF50;
+            background: none;
             border: none;
-            padding: 0.3em;
+            font-size: 1.2em;
             cursor: pointer;
-            font-size: 1.5em;
         }
         .menu-item p {
             margin: 0.5em 0;
-            color: #4CAF50;
-            font-size: 1.2em;
         }
         .edit-button, .delete-button {
-            background-color: #4CAF50 !important;
-            color: white !important;
-            font-size: 0.8em !important;
-            padding: 0.2em 0.4em !important;
-            margin: 0.2em 0 !important;
-            border-radius: 3px !important;
-            border: none !important;
-            display: inline-block !important;
+            background-color: #4CAF50;
+            color: white;
+            font-size: 0.8em;
+            padding: 0.2em 0.5em;
+            margin: 0.2em 0;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
         }
         .order-summary {
             flex: 1;
             background-color: #fff;
-            border-left: 1px solid #ddd;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
             padding: 1em;
-            position: sticky;
-            top: 0;
-            height: 100vh;
-            overflow-y: auto;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-right: 1em;
+            border-radius: 10px;
         }
         .order-summary h2 {
-            text-align: center;
-        }
-        .order-summary ul {
-            list-style: none;
-            padding: 0;
-        }
-        .order-summary ul li {
-            padding: 0.5em 0;
-            border-bottom: 1px solid #ddd;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .total-price {
-            text-align: center;
-            font-size: 1.2em;
-            margin-top: 1em;
+            margin-top: 0;
         }
         .quantity-controls {
             display: flex;
             align-items: center;
-            gap: 0.5em;
-        }
-        .quantity-controls .delete-button {
-            font-size: 0.7em;
         }
         .quantity-controls button {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            padding: 0.5em;
-            cursor: pointer;
-            border-radius: 5px;
+            margin: 0 0.2em;
         }
-        .add-menu-button, .save-menu-button {
-            background-color: white;
-            color: #4CAF50;
-            border: 2px solid #4CAF50;
-            padding: 0.5em 1em;
-            cursor: pointer;
-            font-size: 1em;
-            border-radius: 5px;
+        .total-price {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-top: 1em;
         }
         .finalize-order-button {
             background-color: #4CAF50;
             color: white;
             border: none;
-            padding: 1em;
+            padding: 0.5em 1em;
             cursor: pointer;
-            width: 100%;
             margin-top: 1em;
-            font-size: 1.2em;
+            width: 100%;
+            font-size: 1em;
             border-radius: 5px;
         }
-        .manage-link {
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px;
-            border-radius: 10px;
-            text-align: center;
-            width: 50px;
-            height: 50px;
-            line-height: 30px;
-            text-decoration: none;
-            font-size: 1.5em;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: absolute;
-            right: 10px;
-            top: 0;
-        }
-        .manage-link.statistics {
-            right: 70px;
-        }
     </style>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js"></script>
+    <script>
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const storage = firebase.storage();
+    </script>
 </head>
 <body>
-    <header style="height: 120px;">
-        <h1 style="white-space: nowrap;">세광교회 바자회 키오스크</h1>
-        <div style="position: relative; width: 100%; height: 100%;">
-            <div style="position: absolute; top: 0; right: 60px;">
-                <a href="statistics.html" class="manage-link">📊</a>
-            </div>
-            <div style="position: absolute; top: 0; right: 10px;">
-                <a href="restaurant.html" class="manage-link">📋</a>
-            </div>
-            <div style="position: absolute; bottom: 10px; right: 10px;">
-                <button class="save-menu-button" onclick="saveMenu()">메뉴 저장</button>
-                <button class="add-menu-button" onclick="addMenuItem()">메뉴 추가</button>
-            </div>
+    <header>
+        <h1>세광교회 바자회 키오스크</h1>
+        <div style="position: absolute; top: 10px; right: 60px;">
+            <a href="statistics.html" class="manage-link">📊</a>
+        </div>
+        <div style="position: absolute; top: 10px; right: 10px;">
+            <a href="restaurant.html" class="manage-link">📋</a>
         </div>
     </header>
     <div class="container">
