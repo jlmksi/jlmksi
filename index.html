@@ -360,6 +360,19 @@
             localStorage.setItem('savedOrders', JSON.stringify(savedOrders));
         }
 
+        // Add this function to send the saved orders to the WebSocket server on load
+        function sendSavedOrders() {
+            const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+            savedOrders.forEach(order => {
+                ws.send(JSON.stringify(order));
+            });
+        }
+
+        // Call the function to send saved orders on page load
+        ws.onopen = function() {
+            sendSavedOrders();
+        };
+
         renderMenu();
     </script>
 </body>
