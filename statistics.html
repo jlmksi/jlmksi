@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>통계 페이지</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f8f8;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        header {
+            background-color: #4CAF50;
+            color: white;
+            width: 100%;
+            text-align: center;
+            padding: 1em 0;
+            border-radius: 0 0 10px 10px;
+            margin-bottom: 2em;
+        }
+        .statistics-container {
+            width: 80%;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            padding: 1em;
+            text-align: center;
+        }
+        .statistics-container h2 {
+            margin-top: 0;
+        }
+        .statistics-item {
+            margin: 1em 0;
+            font-size: 1.2em;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>세광교회 바자회 통계 페이지</h1>
+    </header>
+    <div class="statistics-container">
+        <h2>판매 통계</h2>
+        <div class="statistics-item" id="totalItemsSold">총 판매 개수: 0</div>
+        <div class="statistics-item" id="totalRevenue">총 매출: 0원</div>
+    </div>
+    <script>
+        const ws = new WebSocket('wss://restaurant-order-1.onrender.com');
+
+        ws.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            updateStatistics(data);
+        };
+
+        function updateStatistics(data) {
+            let totalItemsSold = 0;
+            let totalRevenue = 0;
+
+            data.orders.forEach(order => {
+                for (const name in order.orders) {
+                    totalItemsSold += order.orders[name].quantity;
+                    totalRevenue += order.orders[name].price * order.orders[name].quantity;
+                }
+            });
+
+            document.getElementById('totalItemsSold').textContent = `총 판매 개수: ${totalItemsSold}`;
+            document.getElementById('totalRevenue').textContent = `총 매출: ${totalRevenue.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}원`;
+        }
+    </script>
+</body>
+</html>
