@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>주문 내역 페이지</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f8f8;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        header {
+            background-color: #4CAF50;
+            color: white;
+            width: 100%;
+            text-align: center;
+            padding: 1em 0;
+            border-radius: 0 0 10px 10px;
+            margin-bottom: 2em;
+        }
+        .orders-container {
+            width: 80%;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            padding: 1em;
+            text-align: center;
+        }
+        .orders-container h2 {
+            margin-top: 0;
+        }
+        .order-item {
+            margin: 1em 0;
+            font-size: 1.2em;
+        }
+    </style>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js"></script>
+    <script>
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const storage = firebase.storage();
+    </script>
+</head>
+<body>
+    <header>
+        <h1>주문 내역 페이지</h1>
+    </header>
+    <div class="orders-container">
+        <h2>실시간 주문 내역</h2>
+        <div id="ordersList"></div>
+    </div>
+    <script>
+        const ws = new WebSocket('wss://restaurant-order-1.onrender.com');
+        const ordersList = document.getElementById('ordersList');
+
+        ws.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            displayOrders(data);
+        };
+
+        function displayOrders(orders) {
+            ordersList.innerHTML = '';
+            orders.forEach((order, index) => {
+                const orderItem = document.createElement('div');
+                orderItem.className = 'order-item';
+                let orderDetails = `<p>주문 번호: ${index + 1}</p>`;
+                orderDetails += `<p>주문 시간: ${new Date(order.timestamp).toLocaleString()}</p>`;
+                orderDetails += `<p>테이블 번호: ${order.tableNumber}</p>`;
+                orderDetails += `<p>주문 내역:</p><ul>`;
+                for (const name in order.orders) {
+                    orderDetails += `<li>${name}: ${order.orders[name].quantity}개</li>`;
+                }
+                orderDetails += `</ul><p>총 금액: ${order.totalPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}원</p>`;
+                orderItem.innerHTML = orderDetails;
+                ordersList.appendChild(orderItem);
+            });
+        }
+
+        // Request the saved orders from the WebSocket server on page load
+        ws.onopen = function() {
+            ws.send(JSON.stringify({ request: 'savedOrders' }));
+        };
+    </script>
+</body>
+</html>
