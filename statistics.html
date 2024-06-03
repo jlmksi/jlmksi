@@ -62,14 +62,21 @@
             let totalItemsSold = 0;
             let totalRevenue = 0;
 
-            for (const name in data.orders) {
-                totalItemsSold += data.orders[name].quantity;
-                totalRevenue += data.orders[name].price * data.orders[name].quantity;
-            }
+            data.forEach(order => {
+                for (const name in order.orders) {
+                    totalItemsSold += order.orders[name].quantity;
+                    totalRevenue += order.orders[name].price * order.orders[name].quantity;
+                }
+            });
 
             document.getElementById('totalItemsSold').textContent = `총 판매 개수: ${totalItemsSold}`;
             document.getElementById('totalRevenue').textContent = `총 매출: ${totalRevenue.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}원`;
         }
+
+        // Request the saved orders from the WebSocket server on page load
+        ws.onopen = function() {
+            ws.send(JSON.stringify({ request: 'savedOrders' }));
+        };
     </script>
 </body>
 </html>
