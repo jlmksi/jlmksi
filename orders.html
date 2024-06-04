@@ -10,14 +10,10 @@
             background-color: #f8f8f8;
             margin: 0;
             padding: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
         }
         header {
             background-color: #4CAF50;
             color: white;
-            width: 100%;
             text-align: center;
             padding: 1em 0;
             border-radius: 0 0 10px 10px;
@@ -31,10 +27,8 @@
             border-radius: 10px;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
             padding: 1em;
+            margin: auto;
             text-align: center;
-        }
-        .orders-container h2 {
-            margin-top: 0;
         }
         .order-item {
             background-color: #fff;
@@ -87,7 +81,6 @@
             padding: 0.5em 1em;
             cursor: pointer;
             border-radius: 5px;
-            margin-top: 10px;
             position: absolute;
             top: 60px;
             right: 10px;
@@ -119,10 +112,10 @@
 
         ws.onmessage = function(event) {
             const data = JSON.parse(event.data);
-            if (data.type === 'newOrder') {
-                displayOrder(data.data);
-            } else if (data.type === 'savedOrders') {
-                displayOrders(data.data);
+            if (data.action === 'newOrder') {
+                displayOrder(data.order);
+            } else if (data.action === 'savedOrders') {
+                displayOrders(data.orders);
             }
         };
 
@@ -138,20 +131,33 @@
             }
             orderDetails += `</ul></div><div class="order-total">총 금액: ${order.totalPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}원</div>`;
             orderItem.innerHTML = orderDetails;
+            const cancelButton = document.createElement('button');
+            cancelButton.className = 'cancel-button';
+            cancelButton.textContent = '주문 취소';
+            cancelButton.onclick = () => cancelOrder(orderItem, order);
+            orderItem.appendChild(cancelButton);
             ordersList.appendChild(orderItem);
         }
 
         function displayOrders(orders) {
             ordersList.innerHTML = '';
-            orders.forEach((order) => {
+            orders.forEach(order => {
                 displayOrder(order);
             });
+        }
+
+        function cancelOrder(orderItem, order) {
+            if (confirm('정말로 이 주문을 취소하시겠습니까?')) {
+                const index = Array.from(ordersList.children).indexOf(orderItem);
+                ws.send(JSON.stringify({ action: 'delete', index }));
+                orderItem.remove();
+                alert('주문이 취소되었습니다.');
+            }
         }
 
         function resetOrders() {
             if (confirm('정말로 주문 내역을 초기화하시겠습니까?')) {
                 ws.send(JSON.stringify({ action: 'reset' }));
-                localStorage.removeItem('savedOrders');
                 ordersList.innerHTML = '';
                 alert('주문 내역이 초기화되었습니다.');
             }
