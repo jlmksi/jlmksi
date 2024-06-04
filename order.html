@@ -36,28 +36,32 @@
             margin-top: 0;
         }
         .order-item {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
             margin: 1em 0;
+            padding: 1em;
+            text-align: left;
+        }
+        .order-item h3 {
+            margin-top: 0;
+        }
+        .order-details ul {
+            list-style: none;
+            padding: 0;
+        }
+        .order-details ul li {
+            padding: 0.5em 0;
+            border-bottom: 1px solid #ddd;
+        }
+        .order-total {
             font-size: 1.2em;
+            font-weight: bold;
+            text-align: right;
+            margin-top: 1em;
         }
     </style>
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js"></script>
-    <script>
-        // Your web app's Firebase configuration
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT_ID.appspot.com",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID"
-        };
-
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const storage = firebase.storage();
-    </script>
 </head>
 <body>
     <header>
@@ -81,14 +85,14 @@
             orders.forEach((order, index) => {
                 const orderItem = document.createElement('div');
                 orderItem.className = 'order-item';
-                let orderDetails = `<p>주문 번호: ${index + 1}</p>`;
+                let orderDetails = `<h3>주문 번호: ${index + 1}</h3>`;
                 orderDetails += `<p>주문 시간: ${new Date(order.timestamp).toLocaleString()}</p>`;
                 orderDetails += `<p>테이블 번호: ${order.tableNumber}</p>`;
-                orderDetails += `<p>주문 내역:</p><ul>`;
+                orderDetails += `<div class="order-details"><p>주문 내역:</p><ul>`;
                 for (const name in order.orders) {
                     orderDetails += `<li>${name}: ${order.orders[name].quantity}개</li>`;
                 }
-                orderDetails += `</ul><p>총 금액: ${order.totalPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}원</p>`;
+                orderDetails += `</ul></div><div class="order-total">총 금액: ${order.totalPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}원</div>`;
                 orderItem.innerHTML = orderDetails;
                 ordersList.appendChild(orderItem);
             });
