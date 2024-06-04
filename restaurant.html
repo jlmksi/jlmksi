@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>식당 관리 페이지</title>
+    <title>주문 관리</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -104,15 +104,21 @@
 
         ws.onmessage = (event) => {
             const order = JSON.parse(event.data);
-            alert('새로운 주문이 들어왔습니다!');
-            orderSound.play();
-            addOrder(order);
+            if (order.type === 'newOrder') {
+                alert('새로운 주문이 들어왔습니다!');
+                orderSound.play();
+                addOrder(order);
+            } else if (order.type === 'savedOrders') {
+                loadOrders(order.orders);
+            }
         };
 
         function addOrder(order) {
             const orderItem = document.createElement('div');
             orderItem.className = 'order-item';
-            let orderDetails = `<h3>테이블 번호: ${order.tableNumber}</h3>`;
+            let orderDetails = `<h3>테이블 번호: ${order.tableNumber || 'N/A'}</h3>`;
+            orderDetails += `<p>주문 시간: ${new Date(order.timestamp).toLocaleString()}</p>`;
+            orderDetails += `<div>주문 내역:</div>`;
             for (const name in order.orders) {
                 orderDetails += `<p>${name}: ${order.orders[name].quantity}개</p>`;
             }
@@ -129,8 +135,7 @@
             orderContainer.removeChild(orderItem);
         }
 
-        function loadOrders() {
-            const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+        function loadOrders(savedOrders) {
             orderContainer.innerHTML = '';
             savedOrders.forEach(order => addOrder(order));
         }
@@ -138,8 +143,6 @@
         ws.onopen = function() {
             ws.send(JSON.stringify({ request: 'savedOrders' }));
         };
-
-        loadOrders();
     </script>
 </body>
 </html>
