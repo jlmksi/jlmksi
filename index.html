@@ -161,12 +161,6 @@
             justify-content: center;
         }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@1.31.0/dist/umd/supabase.min.js"></script>
-    <script>
-        const supabaseUrl = 'https://gpsupybqyhijihabqcyx.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdwc3VweWJxeWhpamloYWJxY3l4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTc1Mjk3MzMsImV4cCI6MjAzMzEwNTczM30.OdQODIBP918QRVWoKtQi6dr41HGnWyva7ajWWe0FJ4g';
-        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
-    </script>
 </head>
 <body>
     <header style="height: 120px;">
@@ -190,7 +184,12 @@
             <button class="finalize-order-button" onclick="finalizeOrder()">주문 결정</button>
         </aside>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@1.31.0/dist/umd/supabase.min.js"></script>
     <script>
+        const supabaseUrl = 'https://gpsupybqyhijihabqcyx.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdwc3VweWJxeWhpamloYWJxY3l4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTc1Mjk3MzMsImV4cCI6MjAzMzEwNTczM30.OdQODIBP918QRVWoKtQi6dr41HGnWyva7ajWWe0FJ4g';
+        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
         const menuContainer = document.getElementById('menuContainer');
         const orderList = document.getElementById('orderList');
         const totalPriceElement = document.getElementById('totalPrice');
@@ -313,52 +312,38 @@
             }
         }
 
-        async function deleteMenuItem(event, name) {
+        function deleteMenuItem(event, name) {
             event.stopPropagation();
             if (confirm('삭제하시겠습니까?')) {
-                const { error } = await supabase
-                    .from('menu')
-                    .delete()
-                    .eq('name', name);
-                if (error) {
-                    console.error('Error deleting menu item:', error);
-                } else {
-                    renderMenu();
-                }
+                const index = menu.findIndex(item => item.name === name);
+                menu.splice(index, 1);
+                renderMenu();
+                saveMenu();
             }
         }
 
-        async function addMenuItem() {
+        function addMenuItem() {
             const newName = prompt('새로운 메뉴 이름을 입력하세요:');
             const newPrice = prompt('새로운 가격을 입력하세요:');
             if (newName && newPrice) {
-                const { error } = await supabase
-                    .from('menu')
-                    .insert([{ name: newName, price: parseInt(newPrice) }]);
-                if (error) {
-                    console.error('Error adding menu item:', error);
-                } else {
-                    renderMenu();
-                }
+                menu.push({ name: newName, price: parseInt(newPrice) });
+                renderMenu();
+                saveMenu();
             }
         }
 
         async function saveMenu() {
-            const { error } = await supabase
+            await supabase
                 .from('menu')
                 .upsert(menu);
-            if (error) {
-                console.error('Error saving menu:', error);
-            } else {
-                alert('메뉴가 저장되었습니다');
-            }
+            alert('메뉴가 저장되었습니다');
         }
 
         function saveOrders() {
             localStorage.setItem('orders', JSON.stringify(orders));
         }
 
-        async function finalizeOrder() {
+        function finalizeOrder() {
             const tableNumber = prompt('테이블 번호를 입력하세요:');
             if (tableNumber) {
                 let orderSummary = `테이블 번호: ${tableNumber}\n\n`;
@@ -371,20 +356,37 @@
                 const confirmOrder = confirm(`${orderSummary}\n\n주문을 완료하시겠습니까?`);
                 if (confirmOrder) {
                     alert('주문이 완료되었습니다');
-                    await saveOrder(tableNumber, orders, totalPrice);
+                    saveOrder(tableNumber, orders, totalPrice);
+                    // Supabase에 저장
+                    supabase
+                        .from('orders')
+                        .insert([{ tableNumber, orders, totalPrice, timestamp: new Date().toISOString() }])
+                        .then(response => {
+                            console.log('Order saved:', response);
+                        });
                     location.reload(); // Reset the page after order is completed
                 }
             }
         }
 
-        async function saveOrder(tableNumber, orders, totalPrice) {
-            const { error } = await supabase
-                .from('orders')
-                .insert([{ tableNumber, orders, totalPrice, timestamp: new Date().toISOString() }]);
-            if (error) {
-                console.error('Error saving order:', error);
-            }
+        function saveOrder(tableNumber, orders, totalPrice) {
+            const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+            savedOrders.push({ tableNumber, orders, totalPrice, timestamp: new Date().toISOString() });
+            localStorage.setItem('savedOrders', JSON.stringify(savedOrders));
         }
+
+        // Add this function to send the saved orders to the WebSocket server on load
+        function sendSavedOrders() {
+            const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+            savedOrders.forEach(order => {
+                ws.send(JSON.stringify(order));
+            });
+        }
+
+        // Call the function to send saved orders on page load
+        ws.onopen = function() {
+            sendSavedOrders();
+        };
 
         renderMenu();
     </script>
