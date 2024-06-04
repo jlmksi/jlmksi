@@ -1,38 +1,70 @@
+const express = require('express');
+const http = require('http');
 const WebSocket = require('ws');
 const admin = require('firebase-admin');
-const serviceAccount = require('./path/to/serviceAccountKey.json'); // 경로를 실제 파일 경로로 변경하세요.
+const serviceAccount = require('./serviceAccountKey.json');
 
+// Firebase 초기화
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
   databaseURL: 'https://restaurant-order-9fd1f.firebaseio.com'
 });
 
 const db = admin.database();
-const ref = db.ref('orders');
+const ordersRef = db.ref('orders');
 
-const wss = new WebSocket.Server({ port: 8080 });
+const app = express();
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server });
 
-wss.on('connection', (ws) => {
-  console.log('Client connected');
+let orders = [];
 
-  ref.on('value', (snapshot) => {
-    const orders = snapshot.val();
-    ws.send(JSON.stringify(orders));
-  });
-
-  ws.on('message', (message) => {
-    const data = JSON.parse(message);
-    if (data.action === 'reset') {
-      ref.remove();
-    } else {
-      const newOrderRef = ref.push();
-      newOrderRef.set(data);
+ordersRef.on('value', snapshot => {
+  orders = snapshot.val() || [];
+  wss.clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify({ action: 'savedOrders', orders }));
     }
-  });
-
-  ws.on('close', () => {
-    console.log('Client disconnected');
   });
 });
 
-console.log('WebSocket server is listening on port 8080');
+wss.on('connection', ws => {
+  ws.on('message', message => {
+    const data = JSON.parse(message);
+    if (data.request === 'savedOrders') {
+      ws.send(JSON.stringify({ action: 'savedOrders', orders }));
+    } else if (data.action === 'reset') {
+      orders = [];
+      ordersRef.set(orders);
+      wss.clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({ action: 'savedOrders', orders }));
+        }
+      });
+    } else if (data.action === 'delete') {
+      orders.splice(data.index, 1);
+      ordersRef.set(orders);
+      wss.clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({ action: 'savedOrders', orders }));
+        }
+      });
+    } else {
+      orders.push(data);
+      ordersRef.set(orders);
+      wss.clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify(data));
+        }
+      });
+    }
+  });
+});
+
+app.get('/', (req, res) => {
+  res.send('Server is running');
+});
+
+server.listen(3000, () => {
+  console.log('Server is listening on port 3000');
+});
