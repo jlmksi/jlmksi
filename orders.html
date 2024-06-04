@@ -44,9 +44,13 @@
             margin: 1em 0;
             padding: 1em;
             text-align: left;
+            position: relative;
         }
         .order-item h3 {
             margin-top: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         .order-details ul {
             list-style: none;
@@ -61,6 +65,15 @@
             font-weight: bold;
             text-align: right;
             margin-top: 1em;
+        }
+        .cancel-button {
+            background-color: white;
+            color: red;
+            border: 1px solid red;
+            padding: 0.3em 0.5em;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 0.9em;
         }
         .home-link {
             background-color: #4CAF50;
@@ -118,7 +131,7 @@
             orders.forEach((order, index) => {
                 const orderItem = document.createElement('div');
                 orderItem.className = 'order-item';
-                let orderDetails = `<h3>주문 번호: ${index + 1}</h3>`;
+                let orderDetails = `<h3>주문 번호: ${index + 1} <button class="cancel-button" onclick="cancelOrder(${index})">주문 취소</button></h3>`;
                 orderDetails += `<p>주문 시간: ${new Date(order.timestamp).toLocaleString()}</p>`;
                 orderDetails += `<p>테이블 번호: ${order.tableNumber}</p>`;
                 orderDetails += `<div class="order-details"><p>주문 내역:</p><ul>`;
@@ -129,6 +142,17 @@
                 orderItem.innerHTML = orderDetails;
                 ordersList.appendChild(orderItem);
             });
+        }
+
+        function cancelOrder(index) {
+            if (confirm('정말로 이 주문을 취소하시겠습니까?')) {
+                let savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+                savedOrders.splice(index, 1);
+                localStorage.setItem('savedOrders', JSON.stringify(savedOrders));
+                displayOrders(savedOrders);
+                ws.send(JSON.stringify({ action: 'update', orders: savedOrders }));
+                alert('주문이 취소되었습니다.');
+            }
         }
 
         function resetOrders() {
