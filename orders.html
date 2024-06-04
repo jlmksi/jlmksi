@@ -48,9 +48,6 @@
         }
         .order-item h3 {
             margin-top: 0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
         }
         .order-details ul {
             list-style: none;
@@ -65,15 +62,6 @@
             font-weight: bold;
             text-align: right;
             margin-top: 1em;
-        }
-        .cancel-button {
-            background-color: white;
-            color: red;
-            border: 1px solid red;
-            padding: 0.3em 0.5em;
-            cursor: pointer;
-            border-radius: 5px;
-            font-size: 0.9em;
         }
         .home-link {
             background-color: #4CAF50;
@@ -102,7 +90,18 @@
             border-radius: 5px;
             margin-top: 10px;
             position: absolute;
-            top: 60px;
+            top: 70px; /* 수정된 위치 */
+            right: 10px;
+        }
+        .cancel-button {
+            background-color: white;
+            color: red;
+            border: 1px solid red;
+            padding: 0.5em 1em;
+            cursor: pointer;
+            border-radius: 5px;
+            position: absolute;
+            top: 10px;
             right: 10px;
         }
     </style>
@@ -131,7 +130,7 @@
             orders.forEach((order, index) => {
                 const orderItem = document.createElement('div');
                 orderItem.className = 'order-item';
-                let orderDetails = `<h3>주문 번호: ${index + 1} <button class="cancel-button" onclick="cancelOrder(${index})">주문 취소</button></h3>`;
+                let orderDetails = `<h3>주문 번호: ${index + 1}</h3>`;
                 orderDetails += `<p>주문 시간: ${new Date(order.timestamp).toLocaleString('ko-KR')}</p>`;
                 orderDetails += `<p>테이블 번호: ${order.tableNumber}</p>`;
                 orderDetails += `<div class="order-details"><p>주문 내역:</p><ul>`;
@@ -139,6 +138,7 @@
                     orderDetails += `<li>${name}: ${order.orders[name].quantity}개</li>`;
                 }
                 orderDetails += `</ul></div><div class="order-total">총 금액: ${order.totalPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}원</div>`;
+                orderDetails += `<button class="cancel-button" onclick="cancelOrder(${index})">주문 취소</button>`;
                 orderItem.innerHTML = orderDetails;
                 ordersList.appendChild(orderItem);
             });
@@ -150,7 +150,7 @@
                 savedOrders.splice(index, 1);
                 localStorage.setItem('savedOrders', JSON.stringify(savedOrders));
                 displayOrders(savedOrders);
-                ws.send(JSON.stringify({ action: 'cancel', index: index }));
+                ws.send(JSON.stringify({ action: 'delete', index }));
                 alert('주문이 취소되었습니다.');
             }
         }
@@ -165,6 +165,22 @@
         }
 
         // Request the saved orders from the WebSocket server on page load
+        ws.onopen = function() {
+            ws.send(JSON.stringify({ request: 'savedOrders' }));
+        };
+
+        function formatOrder(order) {
+            return {
+                ...order,
+                timestamp: order.timestamp ? order.timestamp : new Date().toISOString()
+            };
+        }
+
+        ws.onmessage = function(event) {
+            const data = JSON.parse(event.data).map(formatOrder);
+            displayOrders(data);
+        };
+
         ws.onopen = function() {
             ws.send(JSON.stringify({ request: 'savedOrders' }));
         };
