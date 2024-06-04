@@ -100,16 +100,16 @@
     <script>
         const orderContainer = document.getElementById('orderContainer');
         const orderSound = document.getElementById('orderSound');
-        const ws = new WebSocket('wss://restaurant-order-1.onrender.com');
+        const ws = new WebSocket('wss://restaurant-order-1.onrender.com'); // 웹소켓 주소 수정
 
         ws.onmessage = (event) => {
-            const order = JSON.parse(event.data);
-            if (order.action === 'newOrder') {
+            const data = JSON.parse(event.data);
+            if (data.action === 'newOrder') {
                 alert('새로운 주문이 들어왔습니다!');
                 orderSound.play();
-                addOrder(order);
-            } else if (order.action === 'savedOrders') {
-                loadOrders(order.orders);
+                addOrder(data.order);
+            } else if (data.action === 'savedOrders') {
+                loadOrders(data.orders);
             }
         };
 
