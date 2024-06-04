@@ -3,64 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>주문 내역 페이지</title>
+    <title>주문 현황</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             background-color: #f8f8f8;
             margin: 0;
             padding: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
         }
         header {
             background-color: #4CAF50;
             color: white;
-            width: 100%;
+            padding: 1em;
             text-align: center;
-            padding: 1em 0;
-            border-radius: 0 0 10px 10px;
-            margin-bottom: 2em;
             position: relative;
         }
-        .orders-container {
-            width: 80%;
-            background-color: white;
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1em 0;
+        }
+        table, th, td {
             border: 1px solid #ddd;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            padding: 1em;
+        }
+        th, td {
+            padding: 0.5em;
             text-align: center;
         }
-        .orders-container h2 {
-            margin-top: 0;
-        }
-        .order-item {
-            background-color: #fff;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            margin: 1em 0;
-            padding: 1em;
-            text-align: left;
-        }
-        .order-item h3 {
-            margin-top: 0;
-        }
-        .order-details ul {
-            list-style: none;
-            padding: 0;
-        }
-        .order-details ul li {
-            padding: 0.5em 0;
-            border-bottom: 1px solid #ddd;
-        }
-        .order-total {
-            font-size: 1.2em;
-            font-weight: bold;
-            text-align: right;
-            margin-top: 1em;
+        th {
+            background-color: #f4f4f4;
         }
         .home-link {
             background-color: #4CAF50;
@@ -80,91 +51,84 @@
             top: 10px;
             right: 10px;
         }
-        .reset-button {
-            background-color: white;
-            color: red;
-            border: 1px solid red;
-            padding: 0.5em 1em;
-            cursor: pointer;
-            border-radius: 5px;
-            margin-top: 10px;
-            position: absolute;
-            top: 60px;
-            right: 10px;
+        .total-price {
+            text-align: right;
+            font-size: 2em;
+            margin-top: 1em;
+            margin-right: 1em;
         }
     </style>
 </head>
 <body>
     <header>
-        <h1>주문 내역 페이지</h1>
+        <h1>주문 현황</h1>
         <a href="index.html" class="home-link">🏠</a>
-        <button class="reset-button" onclick="resetOrders()">주문 초기화</button>
     </header>
-    <div class="orders-container">
-        <h2>실시간 주문 내역</h2>
-        <div id="ordersList"></div>
-    </div>
-    <script src="https://unpkg.com/@supabase/supabase-js@1.28.0/dist/umd/supabase.min.js"></script>
+    <table>
+        <thead>
+            <tr>
+                <th>주문 번호</th>
+                <th>테이블 번호</th>
+                <th>주문 시간</th>
+                <th>주문 내용</th>
+                <th>총 금액</th>
+            </tr>
+        </thead>
+        <tbody id="ordersBody"></tbody>
+    </table>
+    <div class="total-price" id="totalRevenue">총 매출: 0원</div>
     <script>
-        const SUPABASE_URL = 'https://gpsupybqyhijihabqcyx.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdwc3VweWJxeWhpamloYWJxY3l4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTc1Mjk3MzMsImV4cCI6MjAzMzEwNTczM30.OdQODIBP918QRVWoKtQi6dr41HGnWyva7ajWWe0FJ4g';
+        const ordersBody = document.getElementById('ordersBody');
+        const totalRevenueElement = document.getElementById('totalRevenue');
+        let totalRevenue = 0;
+        
+        function formatPrice(price) {
+            return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';
+        }
 
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        const ws = new WebSocket('wss://your-server-url');
-        const ordersList = document.getElementById('ordersList');
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+        }
 
-        ws.onmessage = function(event) {
-            const data = JSON.parse(event.data);
-            if (data.action === 'savedOrders') {
-                displayOrders(data.orders);
-            } else if (data.action === 'newOrder') {
-                addOrder(data.order);
+        function renderOrder(order, index) {
+            const row = document.createElement('tr');
+            const orderTime = formatDate(order.time || new Date());
+            let orderDetails = '';
+            for (const item in order.orders) {
+                orderDetails += `${item} ${order.orders[item].quantity}개<br>`;
             }
+            row.innerHTML = `
+                <td>${index + 1}</td>
+                <td>${order.tableNumber}</td>
+                <td>${orderTime}</td>
+                <td>${orderDetails}</td>
+                <td>${formatPrice(order.totalPrice)}</td>
+            `;
+            ordersBody.appendChild(row);
+            totalRevenue += order.totalPrice;
+            totalRevenueElement.textContent = `총 매출: ${formatPrice(totalRevenue)}`;
+        }
+
+        const ws = new WebSocket('wss://restaurant-order-1.onrender.com');
+        ws.onmessage = function(event) {
+            const order = JSON.parse(event.data);
+            const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+            savedOrders.push(order);
+            localStorage.setItem('savedOrders', JSON.stringify(savedOrders));
+            renderOrder(order, savedOrders.length - 1);
         };
 
-        async function displayOrders(orders) {
-            ordersList.innerHTML = '';
-            orders.forEach((order, index) => {
-                const orderItem = document.createElement('div');
-                orderItem.className = 'order-item';
-                let orderDetails = `<h3>주문 번호: ${index + 1}</h3>`;
-                orderDetails += `<p>주문 시간: ${new Date(order.timestamp).toLocaleString()}</p>`;
-                orderDetails += `<p>테이블 번호: ${order.tableNumber}</p>`;
-                orderDetails += `<div class="order-details"><p>주문 내역:</p><ul>`;
-                for (const name in order.orders) {
-                    orderDetails += `<li>${name}: ${order.orders[name].quantity}개</li>`;
-                }
-                orderDetails += `</ul></div><div class="order-total">총 금액: ${order.totalPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}원</div>`;
-                orderDetails += `<button class="delete-button" onclick="deleteOrder(${order.id})">주문 취소</button>`;
-                orderItem.innerHTML = orderDetails;
-                ordersList.appendChild(orderItem);
+        function loadOrders() {
+            const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+            ordersBody.innerHTML = '';
+            totalRevenue = 0;
+            savedOrders.forEach((order, index) => {
+                renderOrder(order, index);
             });
         }
 
-        async function deleteOrder(id) {
-            if (confirm('정말로 주문을 취소하시겠습니까?')) {
-                await supabase
-                    .from('orders')
-                    .delete()
-                    .eq('id', id);
-                ws.send(JSON.stringify({ action: 'delete', id }));
-                location.reload();
-            }
-        }
-
-        async function resetOrders() {
-            if (confirm('정말로 주문 내역을 초기화하시겠습니까?')) {
-                await supabase
-                    .from('orders')
-                    .delete();
-                ws.send(JSON.stringify({ action: 'reset' }));
-                location.reload();
-            }
-        }
-
-        ws.onopen = function() {
-            ws.send(JSON.stringify({ request: 'savedOrders' }));
-        };
+        loadOrders();
     </script>
 </body>
 </html>
