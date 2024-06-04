@@ -96,13 +96,16 @@
     <div class="container">
         <div class="order-container" id="orderContainer"></div>
     </div>
+    <audio id="notificationSound" src="notification.mp3" preload="auto"></audio>
     <script>
         const orderContainer = document.getElementById('orderContainer');
+        const notificationSound = document.getElementById('notificationSound');
         const ws = new WebSocket('wss://restaurant-order-1.onrender.com');
 
         ws.onmessage = (event) => {
             const order = JSON.parse(event.data);
             alert('새로운 주문이 들어왔습니다!');
+            notificationSound.play();
             loadOrders();
         };
 
