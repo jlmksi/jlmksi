@@ -96,29 +96,27 @@
     <div class="container">
         <div class="order-container" id="orderContainer"></div>
     </div>
-    <audio id="orderSound" src="bell.mp3" preload="auto"></audio>
     <script>
         const orderContainer = document.getElementById('orderContainer');
-        const orderSound = document.getElementById('orderSound');
         const ws = new WebSocket('wss://restaurant-order-1.onrender.com');
 
         ws.onmessage = (event) => {
             const order = JSON.parse(event.data);
             if (order.type === 'newOrder') {
-                alert('새로운 주문이 들어왔습니다!');
-                orderSound.play();
-                addOrder(order);
-            } else if (order.type === 'savedOrders') {
-                loadOrders(order.orders);
+                alert('주문이 들어왔습니다!');
+                playBellSound();
+                addOrder(order.data);
+            }
+            if (order.type === 'savedOrders') {
+                order.data.forEach(addOrder);
             }
         };
 
         function addOrder(order) {
             const orderItem = document.createElement('div');
             orderItem.className = 'order-item';
-            let orderDetails = `<h3>테이블 번호: ${order.tableNumber || 'N/A'}</h3>`;
+            let orderDetails = `<h3>테이블 번호: ${order.tableNumber}</h3>`;
             orderDetails += `<p>주문 시간: ${new Date(order.timestamp).toLocaleString()}</p>`;
-            orderDetails += `<div>주문 내역:</div>`;
             for (const name in order.orders) {
                 orderDetails += `<p>${name}: ${order.orders[name].quantity}개</p>`;
             }
@@ -126,23 +124,22 @@
             const completeButton = document.createElement('button');
             completeButton.className = 'complete-button';
             completeButton.textContent = '완료';
-            completeButton.onclick = () => completeOrder(orderItem);
+            completeButton.onclick = () => orderItem.remove();
             orderItem.appendChild(completeButton);
             orderContainer.appendChild(orderItem);
         }
 
-        function completeOrder(orderItem) {
-            orderContainer.removeChild(orderItem);
+        function playBellSound() {
+            const bell = new Audio('bell.mp3'); // 벨 소리 파일 경로
+            bell.play();
         }
 
-        function loadOrders(savedOrders) {
-            orderContainer.innerHTML = '';
+        function loadOrders() {
+            const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
             savedOrders.forEach(order => addOrder(order));
         }
 
-        ws.onopen = function() {
-            ws.send(JSON.stringify({ request: 'savedOrders' }));
-        };
+        loadOrders();
     </script>
 </body>
 </html>
