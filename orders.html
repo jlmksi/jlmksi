@@ -96,17 +96,17 @@
 </head>
 <body>
     <header>
-        <h1>주문 관리</h1>
-        <div class="icon-container">
-            <a href="index.html" class="manage-link">🏠</a>
-        </div>
+        <h1>주문 내역 페이지</h1>
+        <a href="index.html" class="home-link">🏠</a>
+        <button class="reset-button" onclick="resetOrders()">주문 초기화</button>
     </header>
-    <div class="container">
-        <div class="order-container" id="orderContainer"></div>
+    <div class="orders-container">
+        <h2>실시간 주문 내역</h2>
+        <div id="ordersList"></div>
     </div>
     <script>
-        const orderContainer = document.getElementById('orderContainer');
         const ws = new WebSocket('wss://restaurant-order-1.onrender.com');
+        const ordersList = document.getElementById('ordersList');
 
         ws.onopen = function() {
             console.log('WebSocket 연결 성공');
@@ -117,39 +117,44 @@
             console.log('WebSocket 에러:', error);
         };
 
-        ws.onmessage = (event) => {
+        ws.onmessage = function(event) {
             const data = JSON.parse(event.data);
-            if (data.type === 'newOrder') {
-                alert('새로운 주문이 들어왔습니다!');
-                new Audio('notification_sound.mp3').play();
-                loadOrders([data.data]);
-            } else if (data.type === 'savedOrders') {
-                loadOrders(data.data);
+            if (data.action === 'newOrder') {
+                displayOrder(data.order);
+            } else if (data.action === 'savedOrders') {
+                displayOrders(data.orders);
             }
         };
 
-        function loadOrders(orders) {
-            orderContainer.innerHTML = '';
-            orders.forEach((order, index) => {
-                const orderItem = document.createElement('div');
-                orderItem.className = 'order-item';
-                let orderDetails = `<h3>테이블 번호: ${order.tableNumber}</h3>`;
-                for (const name in order.orders) {
-                    orderDetails += `<p>${name}: ${order.orders[name].quantity}개</p>`;
-                }
-                orderItem.innerHTML = orderDetails;
-                const completeButton = document.createElement('button');
-                completeButton.className = 'complete-button';
-                completeButton.textContent = '완료';
-                completeButton.onclick = () => completeOrder(index);
-                orderItem.appendChild(completeButton);
-                orderContainer.appendChild(orderItem);
+        function displayOrder(order) {
+            const orderItem = document.createElement('div');
+            orderItem.className = 'order-item';
+            let orderDetails = `<h3>주문 번호: ${order.tableNumber}</h3>`;
+            orderDetails += `<p>주문 시간: ${new Date(order.timestamp).toLocaleString()}</p>`;
+            orderDetails += `<p>테이블 번호: ${order.tableNumber}</p>`;
+            orderDetails += `<div class="order-details"><p>주문 내역:</p><ul>`;
+            for (const name in order.orders) {
+                orderDetails += `<li>${name}: ${order.orders[name].quantity}개</li>`;
+            }
+            orderDetails += `</ul></div><div class="order-total">총 금액: ${order.totalPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}원</div>`;
+            orderItem.innerHTML = orderDetails;
+            ordersList.appendChild(orderItem);
+        }
+
+        function displayOrders(orders) {
+            ordersList.innerHTML = '';
+            orders.forEach(order => {
+                displayOrder(order);
             });
         }
 
-        function completeOrder(index) {
-            const orderItems = document.querySelectorAll('.order-item');
-            orderItems[index].remove();
+        function resetOrders() {
+            if (confirm('정말로 주문 내역을 초기화하시겠습니까?')) {
+                ws.send(JSON.stringify({ action: 'reset' }));
+                localStorage.removeItem('savedOrders');
+                ordersList.innerHTML = '';
+                alert('주문 내역이 초기화되었습니다.');
+            }
         }
     </script>
 </body>
