@@ -14,45 +14,37 @@
         header {
             background-color: #4CAF50;
             color: white;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.3em 2em;
-            border-radius: 0 0 10px 10px;
+            padding: 1em;
+            text-align: center;
             position: relative;
         }
-        .icon-container {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            display: flex;
-            gap: 1px;
-        }
         table {
-            width: 100%;
+            width: 80%;
+            margin: 2em auto;
             border-collapse: collapse;
-            margin: 1em 0;
-        }
-        table, th, td {
-            border: 1px solid #ddd;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
         th, td {
-            padding: 0.5em;
+            border: 1px solid #ddd;
+            padding: 0.8em;
             text-align: center;
         }
         th {
             background-color: #f4f4f4;
         }
         .reset-button {
-            background-color: red;
-            color: white;
-            border: none;
+            background-color: white;
+            color: red;
+            border: 1px solid red;
             padding: 0.5em 1em;
             cursor: pointer;
             border-radius: 5px;
-            margin-top: 1em;
+            margin: 1em;
+            position: absolute;
+            top: 60px;
+            right: 10px;
         }
-        .home-link {
+        .manage-link {
             background-color: #4CAF50;
             color: white;
             padding: 10px;
@@ -66,17 +58,17 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 10px;
+            position: absolute;
+            top: 10px;
+            right: 10px;
         }
     </style>
 </head>
 <body>
     <header>
         <h1>주문 통계</h1>
-        <div class="icon-container">
-            <a href="index.html" class="home-link">🏠</a>
-            <button class="reset-button" onclick="resetOrders()">초기화</button>
-        </div>
+        <a href="index.html" class="manage-link">🏠</a>
+        <button class="reset-button" onclick="resetData()">주문 초기화</button>
     </header>
     <table>
         <thead>
@@ -87,25 +79,18 @@
                 <th>총 금액</th>
             </tr>
         </thead>
-        <tbody id="statisticsBody"></tbody>
+        <tbody id="statisticsTableBody">
+        </tbody>
     </table>
-    <div class="total-price" id="totalRevenue">총 매출: 0원</div>
     <script>
         function formatPrice(price) {
             return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';
         }
-
         function loadStatistics() {
-            const statisticsBody = document.getElementById('statisticsBody');
-            const totalRevenueElement = document.getElementById('totalRevenue');
-            let savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
-            let totalRevenue = 0;
-
-            statisticsBody.innerHTML = '';
+            const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+            const statisticsTableBody = document.getElementById('statisticsTableBody');
+            statisticsTableBody.innerHTML = '';
             savedOrders.forEach((order, index) => {
-                if (!order.tableNumber || !order.totalPrice || isNaN(order.totalPrice)) {
-                    return; // 잘못된 데이터 건너뜀
-                }
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${index + 1}</td>
@@ -113,22 +98,19 @@
                     <td>${new Date(order.time).toLocaleString()}</td>
                     <td>${formatPrice(order.totalPrice)}</td>
                 `;
-                statisticsBody.appendChild(row);
-                totalRevenue += order.totalPrice;
+                statisticsTableBody.appendChild(row);
             });
-
-            totalRevenueElement.textContent = `총 매출: ${formatPrice(totalRevenue)}`;
         }
-
-        function resetOrders() {
-            if (confirm('모든 주문을 초기화하시겠습니까?')) {
+        function resetData() {
+            if (confirm('정말로 주문 내역을 초기화하시겠습니까?')) {
                 localStorage.removeItem('savedOrders');
-                localStorage.removeItem('orders');
                 loadStatistics();
-                alert('주문이 초기화되었습니다');
+                const ws = new WebSocket('wss://restaurant-order-1.onrender.com');
+                ws.onopen = function() {
+                    ws.send(JSON.stringify({ action: 'reset' }));
+                };
             }
         }
-
         loadStatistics();
     </script>
 </body>
