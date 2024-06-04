@@ -22,13 +22,12 @@
             position: relative;
         }
         .icon-container {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    display: flex;
-    gap: 1px; /* 간격을 줄였습니다 */
-}
-
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 1px; /* 간격을 줄였습니다 */
+        }
         .container {
             display: flex;
             width: 100%;
@@ -317,28 +316,27 @@
             localStorage.setItem('orders', JSON.stringify(orders));
         }
         function finalizeOrder() {
-    const tableNumber = prompt('테이블 번호를 입력하세요:');
-    if (tableNumber) {
-        let orderSummary = `테이블 번호: ${tableNumber}\n\n`;
-        let totalQuantity = 0;
-        for (const name in orders) {
-            orderSummary += `${name}: ${orders[name].quantity}개\n`;
-            totalQuantity += orders[name].quantity;
+            const tableNumber = prompt('테이블 번호를 입력하세요:');
+            if (tableNumber) {
+                let orderSummary = `테이블 번호: ${tableNumber}\n\n`;
+                let totalQuantity = 0;
+                for (const name in orders) {
+                    orderSummary += `${name}: ${orders[name].quantity}개\n`;
+                    totalQuantity += orders[name].quantity;
+                }
+                orderSummary += `\n총 금액: ${formatPrice(totalPrice)}`;
+                const confirmOrder = confirm(`${orderSummary}\n\n주문을 완료하시겠습니까?`);
+                if (confirmOrder) {
+                    alert('주문이 완료되었습니다');
+                    saveOrder(tableNumber, orders, totalPrice);
+                    ws.send(JSON.stringify({ tableNumber, orders, totalPrice, timestamp: Date.now() })); // Send order to WebSocket server with timestamp
+                    location.reload(); // Reset the page after order is completed
+                }
+            }
         }
-        orderSummary += `\n총 금액: ${formatPrice(totalPrice)}`;
-        const confirmOrder = confirm(`${orderSummary}\n\n주문을 완료하시겠습니까?`);
-        if (confirmOrder) {
-            alert('주문이 완료되었습니다');
-            saveOrder(tableNumber, orders, totalPrice);
-            ws.send(JSON.stringify({ tableNumber, orders, totalPrice, timestamp: Date.now() })); // Send order to WebSocket server with timestamp
-            location.reload(); // Reset the page after order is completed
-        }
-    }
-}
-
         function saveOrder(tableNumber, orders, totalPrice) {
             const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
-            savedOrders.push({ tableNumber, orders, totalPrice });
+            savedOrders.push({ tableNumber, orders, totalPrice, timestamp: Date.now() });
             localStorage.setItem('savedOrders', JSON.stringify(savedOrders));
         }
 
