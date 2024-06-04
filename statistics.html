@@ -91,17 +91,6 @@
     </table>
     <div class="total-price" id="totalRevenue">총 매출: 0원</div>
     <script>
-        const statisticsBody = document.getElementById('statisticsBody');
-        const totalRevenueElement = document.getElementById('totalRevenue');
-        const ws = new WebSocket('wss://restaurant-order-1.onrender.com'); // 웹소켓 주소 수정
-
-        ws.onmessage = function(event) {
-            const data = JSON.parse(event.data);
-            if (data.action === 'savedOrders') {
-                displayStatistics(data.orders);
-            }
-        };
-
         function formatPrice(price) {
             return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';
         }
@@ -111,12 +100,19 @@
             return date.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
         }
 
-        function displayStatistics(orders) {
-            statisticsBody.innerHTML = '';
+        function loadStatistics() {
+            const statisticsBody = document.getElementById('statisticsBody');
+            const totalRevenueElement = document.getElementById('totalRevenue');
+            let savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
             let totalRevenue = 0;
-            orders.forEach((order, index) => {
+
+            statisticsBody.innerHTML = '';
+            savedOrders.forEach((order, index) => {
+                if (!order.tableNumber || !order.totalPrice || isNaN(order.totalPrice)) {
+                    return; // 잘못된 데이터 건너뜀
+                }
                 const row = document.createElement('tr');
-                const orderTime = formatDate(order.timestamp);
+                const orderTime = formatDate(order.time || new Date());
                 let orderDetails = '';
                 for (const item in order.orders) {
                     orderDetails += `${item} ${order.orders[item].quantity}개<br>`;
@@ -137,16 +133,14 @@
 
         function resetOrders() {
             if (confirm('모든 주문을 초기화하시겠습니까?')) {
-                ws.send(JSON.stringify({ action: 'reset' }));
                 localStorage.removeItem('savedOrders');
-                displayStatistics([]);
+                localStorage.removeItem('orders');
+                loadStatistics();
                 alert('주문이 초기화되었습니다');
             }
         }
 
-        ws.onopen = function() {
-            ws.send(JSON.stringify({ request: 'savedOrders' }));
-        };
+        loadStatistics();
     </script>
 </body>
 </html>
