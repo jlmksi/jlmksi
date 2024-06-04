@@ -161,23 +161,6 @@
             justify-content: center;
         }
     </style>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyC3FKMzBKOqxKnYIJeU7TimVsZDeOZ2K64",
-            authDomain: "restaurant-order-9fd1f.firebaseapp.com",
-            projectId: "restaurant-order-9fd1f",
-            storageBucket: "restaurant-order-9fd1f.appspot.com",
-            messagingSenderId: "911452281381",
-            appId: "1:911452281381:web:14d56045f7a2b00ace3dcc",
-            measurementId: "G-VFB4GPC024",
-            databaseURL: "https://restaurant-order-9fd1f.firebaseio.com"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-        const ordersRef = db.ref('/orders');
-    </script>
 </head>
 <body>
     <header style="height: 120px;">
@@ -346,22 +329,14 @@
                 if (confirmOrder) {
                     alert('주문이 완료되었습니다');
                     saveOrder(tableNumber, orders, totalPrice);
-                    ws.send(JSON.stringify({ tableNumber, orders, totalPrice, timestamp: Date.now() })); // Send order to WebSocket server
+                    ws.send(JSON.stringify({ tableNumber, orders, totalPrice })); // Send order to WebSocket server
                     location.reload(); // Reset the page after order is completed
                 }
             }
         }
         function saveOrder(tableNumber, orders, totalPrice) {
-            const newOrder = {
-                tableNumber: tableNumber,
-                orders: orders,
-                totalPrice: totalPrice,
-                timestamp: Date.now()
-            };
-            const newOrderRef = ordersRef.push();
-            newOrderRef.set(newOrder);
             const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
-            savedOrders.push(newOrder);
+            savedOrders.push({ tableNumber, orders, totalPrice });
             localStorage.setItem('savedOrders', JSON.stringify(savedOrders));
         }
 
