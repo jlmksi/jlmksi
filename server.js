@@ -1,36 +1,36 @@
-const firebase = require('firebase-admin');
+const WebSocket = require('ws');
+const firebaseAdmin = require('firebase-admin');
 const serviceAccount = require('./serviceAccountKey.json');
 
-firebase.initializeApp({
-  credential: firebase.credential.cert(serviceAccount),
+// Firebase 초기화
+firebaseAdmin.initializeApp({
+  credential: firebaseAdmin.credential.cert(serviceAccount),
   databaseURL: "https://restaurant-order-9fd1f.firebaseio.com"
 });
 
-const db = firebase.database();
-const ref = db.ref("/orders");
+const db = firebaseAdmin.database();
+const ordersRef = db.ref('/orders');
 
-const WebSocket = require('ws');
-const http = require('http');
+// WebSocket 서버 생성
+const server = new WebSocket.Server({ port: 8080 });
 
-const server = http.createServer((req, res) => {
-  res.writeHead(200);
-  res.end('WebSocket server is running');
-});
-
-const wss = new WebSocket.Server({ server });
-
-wss.on('connection', (ws) => {
+server.on('connection', (ws) => {
   console.log('Client connected');
 
   ws.on('message', (message) => {
-    const data = JSON.parse(message);
-    if (data.action === 'newOrder') {
-      ref.push(data.order);
-    } else if (data.action === 'cancelOrder') {
-      ref.child(data.orderId).remove();
-    } else if (data.action === 'resetOrders') {
-      ref.remove();
-    }
+    console.log('Received:', message);
+    const order = JSON.parse(message);
+
+    // 주문 데이터 Firebase에 저장
+    const newOrderRef = ordersRef.push();
+    newOrderRef.set(order);
+
+    // 모든 클라이언트에게 주문 데이터 전송
+    server.clients.forEach(client => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify(order));
+      }
+    });
   });
 
   ws.on('close', () => {
@@ -38,15 +38,4 @@ wss.on('connection', (ws) => {
   });
 });
 
-server.listen(8080, () => {
-  console.log('Server is listening on port 8080');
-});
-
-ref.on('value', (snapshot) => {
-  const orders = snapshot.val();
-  wss.clients.forEach((client) => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(JSON.stringify(orders));
-    }
-  });
-});
+console.log('WebSocket server is listening on port 8080');
