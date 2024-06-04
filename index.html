@@ -195,7 +195,7 @@
             { name: '메뉴2', price: 12000 },
             { name: '메뉴3', price: 15000 }
         ];
-        const ws = new WebSocket('wss://restaurant-order-1.onrender.com'); // 웹소켓 주소 수정
+        const ws = new WebSocket('wss://restaurant-order-1.onrender.com');
         function formatPrice(price) {
             return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';
         }
