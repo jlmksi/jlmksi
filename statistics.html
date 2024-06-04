@@ -33,12 +33,6 @@
         th {
             background-color: #f4f4f4;
         }
-        th:nth-child(1), td:nth-child(1) { /* 주문 번호 컬럼 */
-            width: 10%;
-        }
-        th:nth-child(2), td:nth-child(2) { /* 테이블 번호 컬럼 */
-            width: 10%;
-        }
         .reset-button {
             background-color: white;
             color: red;
@@ -71,12 +65,28 @@
         }
         .total-price {
             text-align: right;
-            font-size: 2em;
-            margin: 1em;
-            margin-right: 2em;
-            font-weight: bold;
+            font-size: 1.5em;
+            margin-top: 1em;
+            padding-right: 1em;
         }
     </style>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyC3FKMzBKOqxKnYIJeU7TimVsZDeOZ2K64",
+            authDomain: "restaurant-order-9fd1f.firebaseapp.com",
+            projectId: "restaurant-order-9fd1f",
+            storageBucket: "restaurant-order-9fd1f.appspot.com",
+            messagingSenderId: "911452281381",
+            appId: "1:911452281381:web:14d56045f7a2b00ace3dcc",
+            measurementId: "G-VFB4GPC024",
+            databaseURL: "https://restaurant-order-9fd1f.firebaseio.com"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const ordersRef = db.ref('/orders');
+    </script>
 </head>
 <body>
     <header>
@@ -87,67 +97,57 @@
     <table>
         <thead>
             <tr>
-                <th>주문 번호</th>
-                <th>테이블 번호</th>
-                <th>주문 시간</th>
+                <th style="width: 10%;">주문 번호</th>
+                <th style="width: 10%;">테이블 번호</th>
+                <th style="width: 20%;">주문 시간</th>
                 <th>주문 내용</th>
-                <th>총 금액</th>
+                <th style="width: 20%;">총 금액</th>
             </tr>
         </thead>
         <tbody id="statisticsBody"></tbody>
     </table>
     <div class="total-price" id="totalRevenue">총 매출: 0원</div>
     <script>
-        function formatPrice(price) {
-            return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';
-        }
+        const statisticsBody = document.getElementById('statisticsBody');
+        const totalRevenueElement = document.getElementById('totalRevenue');
 
-        function formatDate(dateString) {
-            const date = new Date(dateString);
-            return date.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
-        }
+        ordersRef.on('value', (snapshot) => {
+            const orders = snapshot.val();
+            displayStatistics(orders);
+        });
 
-        function loadStatistics() {
-            const statisticsBody = document.getElementById('statisticsBody');
-            const totalRevenueElement = document.getElementById('totalRevenue');
-            let savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
-            let totalRevenue = 0;
-
+        function displayStatistics(orders) {
             statisticsBody.innerHTML = '';
-            savedOrders.forEach((order, index) => {
-                if (!order.tableNumber || !order.totalPrice || isNaN(order.totalPrice)) {
-                    return; // 잘못된 데이터 건너뜀
+            let totalRevenue = 0;
+            Object.keys(orders).forEach((key, index) => {
+                const order = orders[key];
+                const orderTime = new Date(order.timestamp).toLocaleString();
+                let orderDetails = '';
+                for (const name in order.orders) {
+                    orderDetails += `${name} ${order.orders[name].quantity}개<br>`;
                 }
                 const row = document.createElement('tr');
-                const orderTime = formatDate(order.time || new Date());
-                let orderDetails = '';
-                for (const item in order.orders) {
-                    orderDetails += `${item} ${order.orders[item].quantity}개<br>`;
-                }
                 row.innerHTML = `
                     <td>${index + 1}</td>
                     <td>${order.tableNumber}</td>
                     <td>${orderTime}</td>
                     <td>${orderDetails}</td>
-                    <td>${formatPrice(order.totalPrice)}</td>
+                    <td>${order.totalPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}원</td>
                 `;
                 statisticsBody.appendChild(row);
                 totalRevenue += order.totalPrice;
             });
-
-            totalRevenueElement.textContent = `총 매출: ${formatPrice(totalRevenue)}`;
+            totalRevenueElement.textContent = `총 매출: ${totalRevenue.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}원`;
         }
 
         function resetOrders() {
             if (confirm('모든 주문을 초기화하시겠습니까?')) {
-                localStorage.removeItem('savedOrders');
-                localStorage.removeItem('orders');
-                loadStatistics();
-                alert('주문이 초기화되었습니다');
+                ordersRef.remove();
+                statisticsBody.innerHTML = '';
+                totalRevenueElement.textContent = '총 매출: 0원';
+                alert('주문이 초기화되었습니다.');
             }
         }
-
-        loadStatistics();
     </script>
 </body>
 </html>
