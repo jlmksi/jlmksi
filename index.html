@@ -184,7 +184,13 @@
             <button class="finalize-order-button" onclick="finalizeOrder()">주문 결정</button>
         </aside>
     </div>
+    <script src="https://unpkg.com/@supabase/supabase-js@1.28.0/dist/umd/supabase.min.js"></script>
     <script>
+        const SUPABASE_URL = 'https://gpsupybqyhijihabqcyx.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdwc3VweWJxeWhpamloYWJxY3l4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTc1Mjk3MzMsImV4cCI6MjAzMzEwNTczM30.OdQODIBP918QRVWoKtQi6dr41HGnWyva7ajWWe0FJ4g';
+
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
         const menuContainer = document.getElementById('menuContainer');
         const orderList = document.getElementById('orderList');
         const totalPriceElement = document.getElementById('totalPrice');
@@ -195,10 +201,12 @@
             { name: '메뉴2', price: 12000 },
             { name: '메뉴3', price: 15000 }
         ];
-        const ws = new WebSocket('wss://restaurant-order-1.onrender.com');
+        const ws = new WebSocket('wss://your-server-url');
+
         function formatPrice(price) {
             return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';
         }
+
         function renderMenu() {
             menuContainer.innerHTML = '';
             menu.forEach(item => {
@@ -218,6 +226,7 @@
                 menuContainer.appendChild(menuItem);
             });
         }
+
         function orderItem(name, price) {
             if (!orders[name]) {
                 orders[name] = { price: price, quantity: 0 };
@@ -229,6 +238,7 @@
             updateTotalPrice();
             saveOrders();
         }
+
         function addOrderToList(name) {
             const listItem = document.createElement('li');
             listItem.id = `order-${name}`;
@@ -243,6 +253,7 @@
             `;
             orderList.appendChild(listItem);
         }
+
         function updateQuantity(name, change) {
             const newQuantity = orders[name].quantity + change;
             if (newQuantity >= 0) {
@@ -257,6 +268,7 @@
                 saveOrders();
             }
         }
+
         function deleteItem(name) {
             totalPrice -= orders[name].price * orders[name].quantity;
             document.getElementById(`order-${name}`).remove();
@@ -264,14 +276,17 @@
             updateTotalPrice();
             saveOrders();
         }
+
         function updateOrderList() {
             for (const name in orders) {
                 document.getElementById(`quantity-${name}`).textContent = orders[name].quantity;
             }
         }
+
         function updateTotalPrice() {
             totalPriceElement.textContent = `총 금액: ${formatPrice(totalPrice)}`;
         }
+
         function editItem(event, button) {
             event.stopPropagation();
             const menuItem = button.parentElement.parentElement;
@@ -290,6 +305,7 @@
                 saveMenu();
             }
         }
+
         function deleteMenuItem(event, name) {
             event.stopPropagation();
             if (confirm('삭제하시겠습니까?')) {
@@ -299,6 +315,7 @@
                 saveMenu();
             }
         }
+
         function addMenuItem() {
             const newName = prompt('새로운 메뉴 이름을 입력하세요:');
             const newPrice = prompt('새로운 가격을 입력하세요:');
@@ -308,14 +325,17 @@
                 saveMenu();
             }
         }
+
         function saveMenu() {
             localStorage.setItem('menu', JSON.stringify(menu));
             alert('메뉴가 저장되었습니다');
         }
+
         function saveOrders() {
             localStorage.setItem('orders', JSON.stringify(orders));
         }
-        function finalizeOrder() {
+
+        async function finalizeOrder() {
             const tableNumber = prompt('테이블 번호를 입력하세요:');
             if (tableNumber) {
                 let orderSummary = `테이블 번호: ${tableNumber}\n\n`;
@@ -330,17 +350,24 @@
                     alert('주문이 완료되었습니다');
                     saveOrder(tableNumber, orders, totalPrice);
                     ws.send(JSON.stringify({ tableNumber, orders, totalPrice })); // Send order to WebSocket server
+
+                    // Save the order to Supabase
+                    const { error } = await supabase.from('orders').insert([{ tableNumber, orders, totalPrice }]);
+                    if (error) {
+                        console.error('Error saving order to Supabase:', error);
+                    }
+
                     location.reload(); // Reset the page after order is completed
                 }
             }
         }
+
         function saveOrder(tableNumber, orders, totalPrice) {
             const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
             savedOrders.push({ tableNumber, orders, totalPrice });
             localStorage.setItem('savedOrders', JSON.stringify(savedOrders));
         }
 
-        // Add this function to send the saved orders to the WebSocket server on load
         function sendSavedOrders() {
             const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
             savedOrders.forEach(order => {
@@ -348,7 +375,6 @@
             });
         }
 
-        // Call the function to send saved orders on page load
         ws.onopen = function() {
             sendSavedOrders();
         };
