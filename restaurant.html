@@ -18,6 +18,15 @@
             justify-content: center;
             align-items: center;
             padding: 1em 2em;
+            border-radius: 0 0 10px 10px;
+            position: relative;
+        }
+        .icon-container {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 1px;
         }
         .container {
             display: flex;
@@ -60,11 +69,29 @@
             width: 100%;
             font-size: 1em;
         }
+        .manage-link {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px;
+            border-radius: 10px;
+            text-align: center;
+            width: 50px;
+            height: 50px;
+            line-height: 30px;
+            text-decoration: none;
+            font-size: 1.5em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
     </style>
 </head>
 <body>
     <header>
         <h1>주문 관리</h1>
+        <div class="icon-container">
+            <a href="index.html" class="manage-link">🏠</a>
+        </div>
     </header>
     <div class="container">
         <div class="order-container" id="orderContainer"></div>
