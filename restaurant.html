@@ -96,47 +96,48 @@
     <div class="container">
         <div class="order-container" id="orderContainer"></div>
     </div>
-    <audio id="notificationSound" src="notification.mp3" preload="auto"></audio>
+    <audio id="orderSound" src="bell.mp3" preload="auto"></audio>
     <script>
         const orderContainer = document.getElementById('orderContainer');
-        const notificationSound = document.getElementById('notificationSound');
+        const orderSound = document.getElementById('orderSound');
         const ws = new WebSocket('wss://restaurant-order-1.onrender.com');
 
         ws.onmessage = (event) => {
             const order = JSON.parse(event.data);
             alert('새로운 주문이 들어왔습니다!');
-            notificationSound.play();
-            loadOrders();
+            orderSound.play();
+            addOrder(order);
         };
+
+        function addOrder(order) {
+            const orderItem = document.createElement('div');
+            orderItem.className = 'order-item';
+            let orderDetails = `<h3>테이블 번호: ${order.tableNumber}</h3>`;
+            for (const name in order.orders) {
+                orderDetails += `<p>${name}: ${order.orders[name].quantity}개</p>`;
+            }
+            orderItem.innerHTML = orderDetails;
+            const completeButton = document.createElement('button');
+            completeButton.className = 'complete-button';
+            completeButton.textContent = '완료';
+            completeButton.onclick = () => completeOrder(orderItem);
+            orderItem.appendChild(completeButton);
+            orderContainer.appendChild(orderItem);
+        }
+
+        function completeOrder(orderItem) {
+            orderContainer.removeChild(orderItem);
+        }
 
         function loadOrders() {
             const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
             orderContainer.innerHTML = '';
-            savedOrders.forEach((order, index) => {
-                const orderItem = document.createElement('div');
-                orderItem.className = 'order-item';
-                let orderDetails = `<h3>테이블 번호: ${order.tableNumber}</h3>`;
-                for (const name in order.orders) {
-                    orderDetails += `<p>${name}: ${order.orders[name].quantity}개</p>`;
-                }
-                orderItem.innerHTML = orderDetails;
-                const completeButton = document.createElement('button');
-                completeButton.className = 'complete-button';
-                completeButton.textContent = '완료';
-                completeButton.onclick = () => completeOrder(index);
-                orderItem.appendChild(completeButton);
-                orderContainer.appendChild(orderItem);
-            });
+            savedOrders.forEach(order => addOrder(order));
         }
 
-        function completeOrder(index) {
-            if (confirm('삭제하시겠습니까?')) {
-                let savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
-                savedOrders.splice(index, 1);
-                localStorage.setItem('savedOrders', JSON.stringify(savedOrders));
-                loadOrders();
-            }
-        }
+        ws.onopen = function() {
+            ws.send(JSON.stringify({ request: 'savedOrders' }));
+        };
 
         loadOrders();
     </script>
