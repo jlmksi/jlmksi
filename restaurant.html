@@ -85,23 +85,6 @@
             justify-content: center;
         }
     </style>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyC3FKMzBKOqxKnYIJeU7TimVsZDeOZ2K64",
-            authDomain: "restaurant-order-9fd1f.firebaseapp.com",
-            projectId: "restaurant-order-9fd1f",
-            storageBucket: "restaurant-order-9fd1f.appspot.com",
-            messagingSenderId: "911452281381",
-            appId: "1:911452281381:web:14d56045f7a2b00ace3dcc",
-            measurementId: "G-VFB4GPC024",
-            databaseURL: "https://restaurant-order-9fd1f.firebaseio.com"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-        const ordersRef = db.ref('/orders');
-    </script>
 </head>
 <body>
     <header>
@@ -124,31 +107,30 @@
         };
 
         function loadOrders() {
-            ordersRef.once('value', (snapshot) => {
-                const orders = snapshot.val() || {};
-                orderContainer.innerHTML = '';
-                Object.keys(orders).forEach((key, index) => {
-                    const order = orders[key];
-                    const orderItem = document.createElement('div');
-                    orderItem.className = 'order-item';
-                    let orderDetails = `<h3>테이블 번호: ${order.tableNumber}</h3>`;
-                    for (const name in order.orders) {
-                        orderDetails += `<p>${name}: ${order.orders[name].quantity}개</p>`;
-                    }
-                    orderItem.innerHTML = orderDetails;
-                    const completeButton = document.createElement('button');
-                    completeButton.className = 'complete-button';
-                    completeButton.textContent = '완료';
-                    completeButton.onclick = () => completeOrder(key);
-                    orderItem.appendChild(completeButton);
-                    orderContainer.appendChild(orderItem);
-                });
+            const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+            orderContainer.innerHTML = '';
+            savedOrders.forEach((order, index) => {
+                const orderItem = document.createElement('div');
+                orderItem.className = 'order-item';
+                let orderDetails = `<h3>테이블 번호: ${order.tableNumber}</h3>`;
+                for (const name in order.orders) {
+                    orderDetails += `<p>${name}: ${order.orders[name].quantity}개</p>`;
+                }
+                orderItem.innerHTML = orderDetails;
+                const completeButton = document.createElement('button');
+                completeButton.className = 'complete-button';
+                completeButton.textContent = '완료';
+                completeButton.onclick = () => completeOrder(index);
+                orderItem.appendChild(completeButton);
+                orderContainer.appendChild(orderItem);
             });
         }
 
-        function completeOrder(key) {
+        function completeOrder(index) {
             if (confirm('삭제하시겠습니까?')) {
-                ordersRef.child(key).remove();
+                let savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+                savedOrders.splice(index, 1);
+                localStorage.setItem('savedOrders', JSON.stringify(savedOrders));
                 loadOrders();
             }
         }
