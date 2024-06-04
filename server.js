@@ -16,39 +16,35 @@ wss.on('connection', ws => {
   ws.on('message', async message => {
     const data = JSON.parse(message);
 
-    if (data.request === 'savedOrders') {
-      const { data: orders, error } = await supabase
-        .from('orders')
-        .select('*');
-      if (error) {
-        console.error('Error fetching orders:', error);
-        return;
+    try {
+      if (data.request === 'savedOrders') {
+        const { data: orders, error } = await supabase
+          .from('orders')
+          .select('*');
+        if (error) throw error;
+
+        ws.send(JSON.stringify({ action: 'savedOrders', orders }));
+      } else if (data.action === 'delete') {
+        const { error } = await supabase
+          .from('orders')
+          .delete()
+          .eq('id', data.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('orders')
+          .insert([data]);
+        if (error) throw error;
+
+        wss.clients.forEach(client => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({ action: 'newOrder', order: data }));
+          }
+        });
       }
-      ws.send(JSON.stringify({ action: 'savedOrders', orders }));
-    } else if (data.action === 'delete') {
-      await supabase
-        .from('orders')
-        .delete()
-        .eq('id', data.id);
-    } else if (data.action === 'reset') {
-      await supabase
-        .from('orders')
-        .delete()
-        .neq('id', 0); // Deletes all orders
-      broadcastSavedOrders();
-    } else {
-      const { error } = await supabase
-        .from('orders')
-        .insert([data]);
-      if (error) {
-        console.error('Error inserting order:', error);
-        return;
-      }
-      wss.clients.forEach(client => {
-        if (client.readyState === WebSocket.OPEN) {
-          client.send(JSON.stringify({ action: 'newOrder', order: data }));
-        }
-      });
+    } catch (error) {
+      console.error('Error handling message:', error);
+      ws.send(JSON.stringify({ action: 'error', message: error.message }));
     }
   });
 });
@@ -60,18 +56,3 @@ app.get('/', (req, res) => {
 server.listen(3000, () => {
   console.log('Server is listening on port 3000');
 });
-
-async function broadcastSavedOrders() {
-  const { data: orders, error } = await supabase
-    .from('orders')
-    .select('*');
-  if (error) {
-    console.error('Error fetching orders:', error);
-    return;
-  }
-  wss.clients.forEach(client => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(JSON.stringify({ action: 'savedOrders', orders }));
-    }
-  });
-}
