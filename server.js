@@ -2,7 +2,7 @@ const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
 const admin = require('firebase-admin');
-const serviceAccount = require('./serviceAccountKey.json');
+const serviceAccount = require('./restaurant-order-9fd1f-firebase-adminsdk-fy5vk-4389fcc104.json');
 
 // Firebase 초기화
 admin.initializeApp({
@@ -21,11 +21,7 @@ let orders = [];
 
 ordersRef.on('value', snapshot => {
   orders = snapshot.val() || [];
-  wss.clients.forEach(client => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(JSON.stringify({ action: 'savedOrders', orders }));
-    }
-  });
+  broadcastSavedOrders();
 });
 
 wss.on('connection', ws => {
@@ -36,28 +32,16 @@ wss.on('connection', ws => {
     } else if (data.action === 'reset') {
       orders = [];
       ordersRef.set(orders);
-      wss.clients.forEach(client => {
-        if (client.readyState === WebSocket.OPEN) {
-          client.send(JSON.stringify({ action: 'savedOrders', orders }));
-        }
-      });
+      broadcastSavedOrders();
     } else if (data.action === 'delete') {
       orders.splice(data.index, 1);
       ordersRef.set(orders);
-      wss.clients.forEach(client => {
-        if (client.readyState === WebSocket.OPEN) {
-          client.send(JSON.stringify({ action: 'savedOrders', orders }));
-        }
-      });
+      broadcastSavedOrders();
     } else {
       data.timestamp = Date.now(); // 주문 시간 타임스탬프 추가
       orders.push(data);
       ordersRef.set(orders);
-      wss.clients.forEach(client => {
-        if (client.readyState === WebSocket.OPEN) {
-          client.send(JSON.stringify(data));
-        }
-      });
+      broadcastNewOrder(data);
     }
   });
 });
@@ -69,3 +53,19 @@ app.get('/', (req, res) => {
 server.listen(3000, () => {
   console.log('Server is listening on port 3000');
 });
+
+function broadcastSavedOrders() {
+  wss.clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify({ action: 'savedOrders', orders }));
+    }
+  });
+}
+
+function broadcastNewOrder(order) {
+  wss.clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify({ action: 'newOrder', order }));
+    }
+  });
+}
