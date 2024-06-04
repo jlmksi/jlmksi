@@ -1,36 +1,33 @@
 const WebSocket = require('ws');
-const firebaseAdmin = require('firebase-admin');
-const serviceAccount = require('./serviceAccountKey.json');
+const admin = require('firebase-admin');
+const serviceAccount = require('./path/to/serviceAccountKey.json'); // 경로를 실제 파일 경로로 변경하세요.
 
-// Firebase 초기화
-firebaseAdmin.initializeApp({
-  credential: firebaseAdmin.credential.cert(serviceAccount),
-  databaseURL: "https://restaurant-order-9fd1f.firebaseio.com"
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  databaseURL: 'https://restaurant-order-9fd1f.firebaseio.com'
 });
 
-const db = firebaseAdmin.database();
-const ordersRef = db.ref('/orders');
+const db = admin.database();
+const ref = db.ref('orders');
 
-// WebSocket 서버 생성
-const server = new WebSocket.Server({ port: 8080 });
+const wss = new WebSocket.Server({ port: 8080 });
 
-server.on('connection', (ws) => {
+wss.on('connection', (ws) => {
   console.log('Client connected');
 
+  ref.on('value', (snapshot) => {
+    const orders = snapshot.val();
+    ws.send(JSON.stringify(orders));
+  });
+
   ws.on('message', (message) => {
-    console.log('Received:', message);
-    const order = JSON.parse(message);
-
-    // 주문 데이터 Firebase에 저장
-    const newOrderRef = ordersRef.push();
-    newOrderRef.set(order);
-
-    // 모든 클라이언트에게 주문 데이터 전송
-    server.clients.forEach(client => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(JSON.stringify(order));
-      }
-    });
+    const data = JSON.parse(message);
+    if (data.action === 'reset') {
+      ref.remove();
+    } else {
+      const newOrderRef = ref.push();
+      newOrderRef.set(data);
+    }
   });
 
   ws.on('close', () => {
