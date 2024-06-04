@@ -4,7 +4,7 @@ const WebSocket = require('ws');
 const { createClient } = require('@supabase/supabase-js');
 
 const SUPABASE_URL = 'https://gpsupybqyhijihabqcyx.supabase.co';
-const SUPABASE_KEY = 'YOUR_SUPABASE_SERVICE_ROLE_KEY';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdwc3VweWJxeWhpamloYWJxY3l4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTc1Mjk3MzMsImV4cCI6MjAzMzEwNTczM30.OdQODIBP918QRVWoKtQi6dr41HGnWyva7ajWWe0FJ4g';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -30,6 +30,12 @@ wss.on('connection', ws => {
         .from('orders')
         .delete()
         .eq('id', data.id);
+    } else if (data.action === 'reset') {
+      await supabase
+        .from('orders')
+        .delete()
+        .neq('id', 0); // Deletes all orders
+      broadcastSavedOrders();
     } else {
       const { error } = await supabase
         .from('orders')
@@ -54,3 +60,18 @@ app.get('/', (req, res) => {
 server.listen(3000, () => {
   console.log('Server is listening on port 3000');
 });
+
+async function broadcastSavedOrders() {
+  const { data: orders, error } = await supabase
+    .from('orders')
+    .select('*');
+  if (error) {
+    console.error('Error fetching orders:', error);
+    return;
+  }
+  wss.clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify({ action: 'savedOrders', orders }));
+    }
+  });
+}
