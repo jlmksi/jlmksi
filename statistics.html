@@ -93,7 +93,7 @@
     <script>
         const statisticsBody = document.getElementById('statisticsBody');
         const totalRevenueElement = document.getElementById('totalRevenue');
-        const ws = new WebSocket('wss://restaurant-order-1.onrender.com');
+        const ws = new WebSocket('wss://restaurant-order-1.onrender.com'); // 웹소켓 주소 수정
 
         ws.onmessage = function(event) {
             const data = JSON.parse(event.data);
