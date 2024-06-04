@@ -121,7 +121,9 @@
 
         ws.onmessage = function(event) {
             const data = JSON.parse(event.data);
-            displayOrders(data);
+            if (data.action === 'savedOrders') {
+                displayOrders(data.orders);
+            }
         };
 
         function displayOrders(orders) {
@@ -138,7 +140,7 @@
                 }
                 orderDetails += `</ul></div><div class="order-total">총 금액: ${order.totalPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}원</div>`;
                 orderItem.innerHTML = orderDetails;
-                
+
                 const cancelButton = document.createElement('button');
                 cancelButton.className = 'cancel-button';
                 cancelButton.textContent = '주문 취소';
