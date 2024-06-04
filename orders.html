@@ -132,7 +132,7 @@
                 const orderItem = document.createElement('div');
                 orderItem.className = 'order-item';
                 let orderDetails = `<h3>주문 번호: ${index + 1} <button class="cancel-button" onclick="cancelOrder(${index})">주문 취소</button></h3>`;
-                orderDetails += `<p>주문 시간: ${new Date(order.timestamp).toLocaleString()}</p>`;
+                orderDetails += `<p>주문 시간: ${new Date(order.timestamp).toLocaleString('ko-KR')}</p>`;
                 orderDetails += `<p>테이블 번호: ${order.tableNumber}</p>`;
                 orderDetails += `<div class="order-details"><p>주문 내역:</p><ul>`;
                 for (const name in order.orders) {
@@ -150,7 +150,7 @@
                 savedOrders.splice(index, 1);
                 localStorage.setItem('savedOrders', JSON.stringify(savedOrders));
                 displayOrders(savedOrders);
-                ws.send(JSON.stringify({ action: 'update', orders: savedOrders }));
+                ws.send(JSON.stringify({ action: 'cancel', index: index }));
                 alert('주문이 취소되었습니다.');
             }
         }
