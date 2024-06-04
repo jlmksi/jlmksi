@@ -25,24 +25,20 @@
         }
         .orders-container {
             width: 80%;
-            background-color: white;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            padding: 1em;
             text-align: center;
         }
         .orders-container h2 {
             margin-top: 0;
         }
         .order-item {
-            background-color: #fff;
+            background-color: white;
             border: 1px solid #ddd;
             border-radius: 10px;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
             margin: 1em 0;
             padding: 1em;
             text-align: left;
+            position: relative;
         }
         .order-item h3 {
             margin-top: 0;
@@ -60,6 +56,18 @@
             font-weight: bold;
             text-align: right;
             margin-top: 1em;
+        }
+        .cancel-button {
+            position: absolute;
+            right: 10px;
+            bottom: 10px;
+            background-color: #f44336;
+            color: white;
+            border: none;
+            padding: 0.5em 1em;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 1em;
         }
     </style>
 </head>
@@ -93,9 +101,20 @@
                     orderDetails += `<li>${name}: ${order.orders[name].quantity}개</li>`;
                 }
                 orderDetails += `</ul></div><div class="order-total">총 금액: ${order.totalPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}원</div>`;
+                orderDetails += `<button class="cancel-button" onclick="cancelOrder(${index})">주문 취소</button>`;
                 orderItem.innerHTML = orderDetails;
                 ordersList.appendChild(orderItem);
             });
+        }
+
+        function cancelOrder(index) {
+            if (confirm('이 주문을 취소하시겠습니까?')) {
+                let savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+                savedOrders.splice(index, 1);
+                localStorage.setItem('savedOrders', JSON.stringify(savedOrders));
+                ws.send(JSON.stringify({ request: 'cancelOrder', index: index }));
+                displayOrders(savedOrders);
+            }
         }
 
         // Request the saved orders from the WebSocket server on page load
