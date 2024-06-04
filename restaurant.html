@@ -85,75 +85,74 @@
             justify-content: center;
         }
     </style>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyC3FKMzBKOqxKnYIJeU7TimVsZDeOZ2K64",
-            authDomain: "restaurant-order-9fd1f.firebaseapp.com",
-            projectId: "restaurant-order-9fd1f",
-            storageBucket: "restaurant-order-9fd1f.appspot.com",
-            messagingSenderId: "911452281381",
-            appId: "1:911452281381:web:14d56045f7a2b00ace3dcc",
-            measurementId: "G-VFB4GPC024",
-            databaseURL: "https://restaurant-order-9fd1f.firebaseio.com"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-        const ordersRef = db.ref('/orders');
-    </script>
 </head>
 <body>
     <header>
         <h1>주문 관리</h1>
-        <div class="icon-container">
+               <div class="icon-container">
             <a href="index.html" class="manage-link">🏠</a>
         </div>
     </header>
     <div class="container">
         <div class="order-container" id="orderContainer"></div>
     </div>
+    <script src="https://unpkg.com/@supabase/supabase-js@1.28.0/dist/umd/supabase.min.js"></script>
     <script>
-        const orderContainer = document.getElementById('orderContainer');
-        const ws = new WebSocket('wss://restaurant-order-1.onrender.com');
+        const SUPABASE_URL = 'https://gpsupybqyhijihabqcyx.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdwc3VweWJxeWhpamloYWJxY3l4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTc1Mjk3MzMsImV4cCI6MjAzMzEwNTczM30.OdQODIBP918QRVWoKtQi6dr41HGnWyva7ajWWe0FJ4g';
 
-        ws.onmessage = (event) => {
-            const order = JSON.parse(event.data);
-            alert('새로운 주문이 들어왔습니다!');
-            loadOrders();
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const orderContainer = document.getElementById('orderContainer');
+        const ws = new WebSocket('wss://your-server-url');
+
+        ws.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            if (data.action === 'newOrder') {
+                alert('주문이 들어왔습니다!');
+                playBellSound();
+                addOrder(data.order);
+            }
         };
 
-        function loadOrders() {
-            ordersRef.once('value', (snapshot) => {
-                const orders = snapshot.val() || {};
-                orderContainer.innerHTML = '';
-                Object.keys(orders).forEach((key, index) => {
-                    const order = orders[key];
-                    const orderItem = document.createElement('div');
-                    orderItem.className = 'order-item';
-                    let orderDetails = `<h3>테이블 번호: ${order.tableNumber}</h3>`;
-                    for (const name in order.orders) {
-                        orderDetails += `<p>${name}: ${order.orders[name].quantity}개</p>`;
-                    }
-                    orderItem.innerHTML = orderDetails;
-                    const completeButton = document.createElement('button');
-                    completeButton.className = 'complete-button';
-                    completeButton.textContent = '완료';
-                    completeButton.onclick = () => completeOrder(key);
-                    orderItem.appendChild(completeButton);
-                    orderContainer.appendChild(orderItem);
-                });
-            });
+        function playBellSound() {
+            const audio = new Audio('https://your-website-url/bell.mp3');
+            audio.play();
         }
 
-        function completeOrder(key) {
-            if (confirm('삭제하시겠습니까?')) {
-                ordersRef.child(key).remove();
-                loadOrders();
+        async function loadOrders() {
+            const { data: orders, error } = await supabase
+                .from('orders')
+                .select('*');
+            if (error) {
+                console.error('Error fetching orders:', error);
+                return;
             }
+            orders.forEach(addOrder);
         }
 
-        loadOrders();
+        function addOrder(order) {
+            const orderItem = document.createElement('div');
+            orderItem.className = 'order-item';
+            let orderDetails = `<h3>테이블 번호: ${order.tableNumber}</h3>`;
+            for (const name in order.orders) {
+                orderDetails += `<p>${name}: ${order.orders[name].quantity}개</p>`;
+            }
+            orderItem.innerHTML = orderDetails;
+            const completeButton = document.createElement('button');
+            completeButton.className = 'complete-button';
+            completeButton.textContent = '완료';
+            completeButton.onclick = () => completeOrder(orderItem);
+            orderItem.appendChild(completeButton);
+            orderContainer.appendChild(orderItem);
+        }
+
+        function completeOrder(orderItem) {
+            orderContainer.removeChild(orderItem);
+        }
+
+        ws.onopen = function() {
+            loadOrders();
+        };
     </script>
 </body>
 </html>
