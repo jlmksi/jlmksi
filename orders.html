@@ -44,7 +44,6 @@
             margin: 1em 0;
             padding: 1em;
             text-align: left;
-            position: relative;
         }
         .order-item h3 {
             margin-top: 0;
@@ -88,19 +87,9 @@
             padding: 0.5em 1em;
             cursor: pointer;
             border-radius: 5px;
+            margin-top: 10px;
             position: absolute;
-            top: 70px;
-            right: 10px;
-        }
-        .cancel-button {
-            background-color: white;
-            color: red;
-            border: 1px solid red;
-            padding: 0.5em 1em;
-            cursor: pointer;
-            border-radius: 5px;
-            position: absolute;
-            top: 10px;
+            top: 60px;
             right: 10px;
         }
     </style>
@@ -124,11 +113,7 @@
             if (data.action === 'savedOrders') {
                 displayOrders(data.orders);
             } else {
-                // New order received
-                const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
-                savedOrders.push(data);
-                localStorage.setItem('savedOrders', JSON.stringify(savedOrders));
-                displayOrders(savedOrders);
+                displayOrders([data]);
             }
         };
 
@@ -145,39 +130,24 @@
                     orderDetails += `<li>${name}: ${order.orders[name].quantity}개</li>`;
                 }
                 orderDetails += `</ul></div><div class="order-total">총 금액: ${order.totalPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}원</div>`;
+                orderDetails += `<button class="complete-button" onclick="deleteOrder(${index})">주문 취소</button>`;
                 orderItem.innerHTML = orderDetails;
-
-                const cancelButton = document.createElement('button');
-                cancelButton.className = 'cancel-button';
-                cancelButton.textContent = '주문 취소';
-                cancelButton.onclick = () => cancelOrder(index);
-                orderItem.appendChild(cancelButton);
-
                 ordersList.appendChild(orderItem);
             });
         }
 
-        function cancelOrder(index) {
+        function deleteOrder(index) {
             if (confirm('정말로 이 주문을 취소하시겠습니까?')) {
-                const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
-                savedOrders.splice(index, 1);
-                localStorage.setItem('savedOrders', JSON.stringify(savedOrders));
-                ws.send(JSON.stringify({ action: 'delete', index: index }));
-                displayOrders(savedOrders);
-                alert('주문이 취소되었습니다.');
+                ws.send(JSON.stringify({ action: 'delete', index }));
             }
         }
 
         function resetOrders() {
             if (confirm('정말로 주문 내역을 초기화하시겠습니까?')) {
-                localStorage.removeItem('savedOrders');
-                ordersList.innerHTML = '';
                 ws.send(JSON.stringify({ action: 'reset' }));
-                alert('주문 내역이 초기화되었습니다.');
             }
         }
 
-        // Request the saved orders from the WebSocket server on page load
         ws.onopen = function() {
             ws.send(JSON.stringify({ request: 'savedOrders' }));
         };
