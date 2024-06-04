@@ -21,6 +21,14 @@
             border-radius: 0 0 10px 10px;
             position: relative;
         }
+        .icon-container {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    gap: 1px; /* 간격을 줄였습니다 */
+}
+
         .container {
             display: flex;
             width: 100%;
@@ -152,29 +160,20 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            position: absolute;
-            right: 10px;
-            top: 0;
-        }
-        .manage-link.statistics {
-            right: 70px;
         }
     </style>
 </head>
 <body>
     <header style="height: 120px;">
         <h1 style="white-space: nowrap;">세광교회 바자회 키오스크</h1>
-        <div style="position: relative; width: 100%; height: 100%;">
-            <div style="position: absolute; top: 0; right: 60px;">
-                <a href="statistics.html" class="manage-link">📊</a>
-            </div>
-            <div style="position: absolute; top: 0; right: 10px;">
-                <a href="restaurant.html" class="manage-link">📋</a>
-            </div>
-            <div style="position: absolute; bottom: 10px; right: 10px;">
-                <button class="save-menu-button" onclick="saveMenu()">메뉴 저장</button>
-                <button class="add-menu-button" onclick="addMenuItem()">메뉴 추가</button>
-            </div>
+        <div class="icon-container">
+            <a href="statistics.html" class="manage-link">📊</a>
+            <a href="orders.html" class="manage-link">📜</a>
+            <a href="restaurant.html" class="manage-link">📋</a>
+        </div>
+        <div style="position: absolute; bottom: 10px; right: 10px;">
+            <button class="save-menu-button" onclick="saveMenu()">메뉴 저장</button>
+            <button class="add-menu-button" onclick="addMenuItem()">메뉴 추가</button>
         </div>
     </header>
     <div class="container">
