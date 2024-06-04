@@ -44,6 +44,7 @@
             margin: 1em 0;
             padding: 1em;
             text-align: left;
+            position: relative;
         }
         .order-item h3 {
             margin-top: 0;
@@ -89,18 +90,19 @@
             border-radius: 5px;
             margin-top: 10px;
             position: absolute;
-            top: 60px;
+            top: 70px;
             right: 10px;
         }
         .cancel-button {
             background-color: white;
             color: red;
             border: 1px solid red;
-            padding: 0.3em 0.5em;
+            padding: 0.5em 1em;
             cursor: pointer;
             border-radius: 5px;
-            margin-left: 10px;
-            font-size: 0.8em;
+            position: absolute;
+            top: 10px;
+            right: 10px;
         }
     </style>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
@@ -134,10 +136,12 @@
     <script>
         const ordersList = document.getElementById('ordersList');
 
-        ordersRef.on('value', (snapshot) => {
-            const orders = snapshot.val();
-            displayOrders(orders);
-        });
+        const ws = new WebSocket('wss://restaurant-order-1.onrender.com');
+
+        ws.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            displayOrders(data);
+        };
 
         function displayOrders(orders) {
             ordersList.innerHTML = '';
@@ -145,7 +149,7 @@
                 const order = orders[key];
                 const orderItem = document.createElement('div');
                 orderItem.className = 'order-item';
-                let orderDetails = `<h3>주문 번호: ${index + 1} <button class="cancel-button" onclick="cancelOrder('${key}')">주문 취소</button></h3>`;
+                let orderDetails = `<h3>주문 번호: ${index + 1}</h3>`;
                 orderDetails += `<p>주문 시간: ${new Date(order.timestamp).toLocaleString()}</p>`;
                 orderDetails += `<p>테이블 번호: ${order.tableNumber}</p>`;
                 orderDetails += `<div class="order-details"><p>주문 내역:</p><ul>`;
@@ -154,14 +158,19 @@
                 }
                 orderDetails += `</ul></div><div class="order-total">총 금액: ${order.totalPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}원</div>`;
                 orderItem.innerHTML = orderDetails;
+                const cancelButton = document.createElement('button');
+                cancelButton.className = 'cancel-button';
+                cancelButton.textContent = '주문 취소';
+                cancelButton.onclick = () => cancelOrder(key);
+                orderItem.appendChild(cancelButton);
                 ordersList.appendChild(orderItem);
             });
         }
 
-        function cancelOrder(orderId) {
-            if (confirm('정말로 이 주문을 취소하시겠습니까?')) {
-                ordersRef.child(orderId).remove();
-                alert('주문이 취소되었습니다.');
+        function cancelOrder(key) {
+            if (confirm('정말로 주문을 취소하시겠습니까?')) {
+                ordersRef.child(key).remove();
+                loadOrders();
             }
         }
 
@@ -172,6 +181,22 @@
                 alert('주문 내역이 초기화되었습니다.');
             }
         }
+
+        function loadOrders() {
+            ordersRef.once('value', (snapshot) => {
+                const orders = snapshot.val() || {};
+                displayOrders(orders);
+            });
+        }
+
+        ws.onopen = function() {
+            ordersRef.once('value', (snapshot) => {
+                const orders = snapshot.val() || {};
+                ws.send(JSON.stringify(orders));
+            });
+        };
+
+        loadOrders();
     </script>
 </body>
 </html>
