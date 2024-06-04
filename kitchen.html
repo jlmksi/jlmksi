@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>주방 주문</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f8f8;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 1em;
+            text-align: center;
+            position: relative;
+        }
+        .home-link {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px;
+            border-radius: 10px;
+            text-align: center;
+            width: 50px;
+            height: 50px;
+            line-height: 30px;
+            text-decoration: none;
+            font-size: 1.5em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+        .order-list {
+            margin: 1em;
+        }
+        .order-item {
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 1em;
+            margin-bottom: 1em;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        .order-item button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 0.5em 1em;
+            cursor: pointer;
+            border-radius: 5px;
+            position: absolute;
+            right: 1em;
+            bottom: 1em;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>주방 주문</h1>
+        <a href="index.html" class="home-link">🏠</a>
+    </header>
+    <div class="order-list" id="orderList"></div>
+    <audio id="notificationSound" src="notification.mp3"></audio>
+    <script>
+        const orderList = document.getElementById('orderList');
+        const notificationSound = document.getElementById('notificationSound');
+
+        function renderOrder(order, index) {
+            const orderItem = document.createElement('div');
+            orderItem.className = 'order-item';
+            let orderDetails = `<strong>테이블 번호: ${order.tableNumber}</strong><br>`;
+            for (const item in order.orders) {
+                orderDetails += `${item} ${order.orders[item].quantity}개<br>`;
+            }
+            orderItem.innerHTML = `
+                ${orderDetails}
+                <button onclick="completeOrder(${index})">완료</button>
+            `;
+            orderList.appendChild(orderItem);
+        }
+
+        function completeOrder(index) {
+            if (confirm('이 주문을 완료하시겠습니까?')) {
+                document.getElementById('orderList').children[index].remove();
+                alert('주문이 완료되었습니다');
+            }
+        }
+
+        const ws = new WebSocket('wss://restaurant-order-1.onrender.com');
+        ws.onmessage = function(event) {
+            const order = JSON.parse(event.data);
+            const savedOrders = JSON.parse(localStorage.getItem('kitchenOrders')) || [];
+            savedOrders.push(order);
+            localStorage.setItem('kitchenOrders', JSON.stringify(savedOrders));
+            renderOrder(order, savedOrders.length - 1);
+            notificationSound.play();
+            alert('주문이 들어왔습니다');
+        };
+
+        function loadOrders() {
+            const savedOrders = JSON.parse(localStorage.getItem('kitchenOrders')) || [];
+            orderList.innerHTML = '';
+            savedOrders.forEach((order, index) => {
+                renderOrder(order, index);
+            });
+        }
+
+        loadOrders();
+    </script>
+</body>
+</html>
