@@ -14,47 +14,38 @@
         header {
             background-color: #4CAF50;
             color: white;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 1em 2em;
-            border-radius: 0 0 10px 10px;
+            padding: 1em;
+            text-align: center;
             position: relative;
         }
-        .icon-container {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            display: flex;
-            gap: 1px;
-        }
-        .container {
-            display: flex;
+        table {
             width: 100%;
-            justify-content: center;
-            padding: 2em;
+            border-collapse: collapse;
+            margin: 1em 0;
         }
-        .statistics {
-            background-color: white;
+        table, th, td {
             border: 1px solid #ddd;
-            padding: 1em;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            width: 80%;
         }
-        .statistics h2 {
+        th, td {
+            padding: 0.5em;
             text-align: center;
         }
-        .statistics ul {
-            list-style: none;
-            padding: 0;
+        th {
+            background-color: #f4f4f4;
         }
-        .statistics ul li {
-            padding: 0.5em 0;
-            border-bottom: 1px solid #ddd;
-            display: flex;
-            justify-content: space-between;
+        .reset-button {
+            background-color: white;
+            color: red;
+            border: 1px solid red;
+            padding: 0.5em 1em;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-top: 10px;
+            position: absolute;
+            top: 60px;
+            right: 10px;
         }
-        .manage-link {
+        .home-link {
             background-color: #4CAF50;
             color: white;
             padding: 10px;
@@ -68,48 +59,93 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+        .total-price {
+            text-align: right;
+            font-size: 2em;
+            margin-top: 1em;
+            margin-right: 1em;
         }
     </style>
 </head>
 <body>
     <header>
         <h1>주문 통계</h1>
-        <div class="icon-container">
-            <a href="index.html" class="manage-link">🏠</a>
-        </div>
+        <a href="index.html" class="home-link">🏠</a>
+        <button class="reset-button" onclick="resetOrders()">주문 초기화</button>
     </header>
-    <div class="container">
-        <div class="statistics" id="statistics">
-            <h2>총 주문 내역</h2>
-            <ul id="orderList"></ul>
-        </div>
-    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>주문 번호</th>
+                <th>테이블 번호</th>
+                <th>주문 시간</th>
+                <th>주문 내용</th>
+                <th>총 금액</th>
+            </tr>
+        </thead>
+        <tbody id="statisticsBody"></tbody>
+    </table>
+    <div class="total-price" id="totalRevenue">총 매출: 0원</div>
     <script>
-        const orderList = document.getElementById('orderList');
+        const statisticsBody = document.getElementById('statisticsBody');
+        const totalRevenueElement = document.getElementById('totalRevenue');
         const ws = new WebSocket('wss://restaurant-order-1.onrender.com');
 
-        ws.onmessage = (event) => {
-            const order = JSON.parse(event.data);
-            if (order.type === 'newOrder') {
-                addOrder(order.data);
-            }
-            if (order.type === 'savedOrders') {
-                order.data.forEach(addOrder);
+        ws.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            if (data.action === 'savedOrders') {
+                displayStatistics(data.orders);
             }
         };
 
-        function addOrder(order) {
-            const listItem = document.createElement('li');
-            listItem.innerHTML = `
-                <span>테이블 번호: ${order.tableNumber}</span>
-                <span>주문 시간: ${new Date(order.timestamp).toLocaleString()}</span>
-                <span>총 금액: ${order.totalPrice}원</span>
-            `;
-            orderList.appendChild(listItem);
+        function formatPrice(price) {
+            return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';
         }
 
-        ws.onopen = () => {
-            ws.send(JSON.stringify({ type: 'requestSavedOrders' }));
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+        }
+
+        function displayStatistics(orders) {
+            statisticsBody.innerHTML = '';
+            let totalRevenue = 0;
+            orders.forEach((order, index) => {
+                const row = document.createElement('tr');
+                const orderTime = formatDate(order.timestamp);
+                let orderDetails = '';
+                for (const item in order.orders) {
+                    orderDetails += `${item} ${order.orders[item].quantity}개<br>`;
+                }
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${order.tableNumber}</td>
+                    <td>${orderTime}</td>
+                    <td>${orderDetails}</td>
+                    <td>${formatPrice(order.totalPrice)}</td>
+                `;
+                statisticsBody.appendChild(row);
+                totalRevenue += order.totalPrice;
+            });
+
+            totalRevenueElement.textContent = `총 매출: ${formatPrice(totalRevenue)}`;
+        }
+
+        function resetOrders() {
+            if (confirm('모든 주문을 초기화하시겠습니까?')) {
+                ws.send(JSON.stringify({ action: 'reset' }));
+                localStorage.removeItem('savedOrders');
+                displayStatistics([]);
+                alert('주문이 초기화되었습니다');
+            }
+        }
+
+        ws.onopen = function() {
+            ws.send(JSON.stringify({ request: 'savedOrders' }));
         };
     </script>
 </body>
