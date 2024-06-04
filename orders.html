@@ -3,70 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>주문 내역</title>
+    <title>주문 내역 페이지</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             background-color: #f8f8f8;
             margin: 0;
             padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
         header {
             background-color: #4CAF50;
             color: white;
-            padding: 1em;
+            width: 100%;
             text-align: center;
+            padding: 1em 0;
+            border-radius: 0 0 10px 10px;
+            margin-bottom: 2em;
             position: relative;
         }
-        .order-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 2em;
-        }
-        .order-item {
+        .orders-container {
+            width: 80%;
             background-color: white;
             border: 1px solid #ddd;
             border-radius: 10px;
-            margin: 1em;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
             padding: 1em;
-            width: 80%;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            position: relative;
+            text-align: center;
+        }
+        .orders-container h2 {
+            margin-top: 0;
+        }
+        .order-item {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            margin: 1em 0;
+            padding: 1em;
+            text-align: left;
         }
         .order-item h3 {
-            margin: 0 0 0.5em 0;
+            margin-top: 0;
+        }
+        .order-details ul {
+            list-style: none;
+            padding: 0;
+        }
+        .order-details ul li {
+            padding: 0.5em 0;
+            border-bottom: 1px solid #ddd;
+        }
+        .order-total {
             font-size: 1.2em;
-        }
-        .order-item p {
-            margin: 0.3em 0;
-            font-size: 1.5em;
             font-weight: bold;
-        }
-        .complete-button {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            padding: 0.5em 1em;
-            cursor: pointer;
+            text-align: right;
             margin-top: 1em;
-            width: 100%;
-            font-size: 1em;
         }
-        .reset-button {
-    background-color: white;
-    color: red;
-    border: 1px solid red;
-    padding: 0.5em 1em;
-    cursor: pointer;
-    border-radius: 5px;
-    margin-top: 10px;
-    position: absolute;
-    top: 60px; /* 조금 위로 이동 */
-    right: 10px;
-}
-
-        .manage-link {
+        .home-link {
             background-color: #4CAF50;
             color: white;
             padding: 10px;
@@ -84,70 +80,70 @@
             top: 10px;
             right: 10px;
         }
+        .reset-button {
+            background-color: white;
+            color: red;
+            border: 1px solid red;
+            padding: 0.5em 1em;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-top: 10px;
+            position: absolute;
+            top: 60px;
+            right: 10px;
+        }
     </style>
 </head>
 <body>
     <header>
-        <h1>주문 내역</h1>
-        <a href="index.html" class="manage-link">🏠</a>
-        <button class="reset-button" onclick="resetData()">주문 초기화</button>
+        <h1>주문 내역 페이지</h1>
+        <a href="index.html" class="home-link">🏠</a>
+        <button class="reset-button" onclick="resetOrders()">주문 초기화</button>
     </header>
-    <div class="order-container" id="orderContainer"></div>
+    <div class="orders-container">
+        <h2>실시간 주문 내역</h2>
+        <div id="ordersList"></div>
+    </div>
     <script>
-        const orderContainer = document.getElementById('orderContainer');
         const ws = new WebSocket('wss://restaurant-order-1.onrender.com');
+        const ordersList = document.getElementById('ordersList');
 
-        ws.onmessage = (event) => {
-            const order = JSON.parse(event.data);
-            alert('새로운 주문이 들어왔습니다!');
-            loadOrders();
+        ws.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            displayOrders(data);
         };
 
-        function loadOrders() {
-            const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
-            orderContainer.innerHTML = '';
-            savedOrders.forEach((order, index) => {
+        function displayOrders(orders) {
+            ordersList.innerHTML = '';
+            orders.forEach((order, index) => {
                 const orderItem = document.createElement('div');
                 orderItem.className = 'order-item';
-                let orderDetails = `<h3>테이블 번호: ${order.tableNumber}</h3>`;
+                let orderDetails = `<h3>주문 번호: ${index + 1}</h3>`;
+                orderDetails += `<p>주문 시간: ${new Date(order.timestamp).toLocaleString()}</p>`;
+                orderDetails += `<p>테이블 번호: ${order.tableNumber}</p>`;
+                orderDetails += `<div class="order-details"><p>주문 내역:</p><ul>`;
                 for (const name in order.orders) {
-                    orderDetails += `<p>${name}: ${order.orders[name].quantity}개</p>`;
+                    orderDetails += `<li>${name}: ${order.orders[name].quantity}개</li>`;
                 }
+                orderDetails += `</ul></div><div class="order-total">총 금액: ${order.totalPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}원</div>`;
                 orderItem.innerHTML = orderDetails;
-                const completeButton = document.createElement('button');
-                completeButton.className = 'complete-button';
-                completeButton.textContent = '완료';
-                completeButton.onclick = () => completeOrder(index);
-                orderItem.appendChild(completeButton);
-                orderContainer.appendChild(orderItem);
+                ordersList.appendChild(orderItem);
             });
         }
 
-        function completeOrder(index) {
-            if (confirm('삭제하시겠습니까?')) {
-                let savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
-                savedOrders.splice(index, 1);
-                localStorage.setItem('savedOrders', JSON.stringify(savedOrders));
-                loadOrders();
-                const ws = new WebSocket('wss://restaurant-order-1.onrender.com');
-                ws.onopen = function() {
-                    ws.send(JSON.stringify({ action: 'reset' }));
-                };
-            }
-        }
-
-        function resetData() {
+        function resetOrders() {
             if (confirm('정말로 주문 내역을 초기화하시겠습니까?')) {
                 localStorage.removeItem('savedOrders');
-                loadOrders();
-                const ws = new WebSocket('wss://restaurant-order-1.onrender.com');
-                ws.onopen = function() {
-                    ws.send(JSON.stringify({ action: 'reset' }));
-                };
+                ordersList.innerHTML = '';
+                ws.send(JSON.stringify({ action: 'reset' }));
+                alert('주문 내역이 초기화되었습니다.');
             }
         }
 
-        loadOrders();
+        // Request the saved orders from the WebSocket server on page load
+        ws.onopen = function() {
+            ws.send(JSON.stringify({ request: 'savedOrders' }));
+        };
     </script>
 </body>
 </html>
