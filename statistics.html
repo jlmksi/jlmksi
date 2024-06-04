@@ -3,65 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>통계 페이지</title>
+    <title>주문 통계</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             background-color: #f8f8f8;
             margin: 0;
             padding: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
         }
         header {
             background-color: #4CAF50;
             color: white;
-            width: 100%;
+            padding: 1em;
             text-align: center;
-            padding: 1em 0;
-            border-radius: 0 0 10px 10px;
-            margin-bottom: 2em;
             position: relative;
         }
-        .icon-container {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            display: flex;
-            gap: 1px;
-        }
-        .statistics-container {
-            width: 80%;
-            background-color: white;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            padding: 1em;
-            text-align: center;
-            overflow-x: auto;
-        }
         table {
-            width: 100%;
+            width: 80%;
+            margin: 2em auto;
             border-collapse: collapse;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
         th, td {
-            padding: 1em;
             border: 1px solid #ddd;
-            text-align: left;
+            padding: 0.8em;
+            text-align: center;
         }
         th {
             background-color: #f4f4f4;
         }
-        th.order-number, td.order-number {
-            width: 10%; /* 너비를 절반으로 줄였습니다 */
-        }
-        th.table-number, td.table-number {
-            width: 10%; /* 너비를 절반으로 줄였습니다 */
-        }
-        .total-sales {
-            font-size: 1.5em;
-            margin-top: 1em;
+        .reset-button {
+            background-color: white;
+            color: red;
+            border: 1px solid red;
+            padding: 0.5em 1em;
+            cursor: pointer;
+            border-radius: 5px;
+            margin: 1em;
+            position: absolute;
+            top: 60px;
+            right: 10px;
         }
         .manage-link {
             background-color: #4CAF50;
@@ -77,61 +58,60 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            position: absolute;
+            top: 10px;
+            right: 10px;
         }
     </style>
 </head>
 <body>
     <header>
-        <h1>통계 페이지</h1>
-        <div class="icon-container">
-            <a href="index.html" class="manage-link">🏠</a>
-        </div>
+        <h1>주문 통계</h1>
+        <a href="index.html" class="manage-link">🏠</a>
+        <button class="reset-button" onclick="resetData()">주문 초기화</button>
     </header>
-    <div class="statistics-container">
-        <h2>주문 통계</h2>
-        <table id="statisticsTable">
-            <thead>
-                <tr>
-                    <th class="order-number">주문 번호</th>
-                    <th class="table-number">테이블 번호</th>
-                    <th>주문 시간</th>
-                    <th>총 금액</th>
-                </tr>
-            </thead>
-            <tbody>
-            </tbody>
-        </table>
-        <div class="total-sales" id="totalSales">총 매출: 0원</div>
-    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>주문 번호</th>
+                <th>테이블 번호</th>
+                <th>주문 시간</th>
+                <th>총 금액</th>
+            </tr>
+        </thead>
+        <tbody id="statisticsTableBody">
+        </tbody>
+    </table>
     <script>
-        const ws = new WebSocket('wss://restaurant-order-1.onrender.com');
-        const statisticsTable = document.getElementById('statisticsTable').getElementsByTagName('tbody')[0];
-        const totalSalesElement = document.getElementById('totalSales');
-        let totalSales = 0;
-
-        ws.onmessage = function(event) {
-            const data = JSON.parse(event.data);
-            displayStatistics(data);
-        };
-
-        function displayStatistics(orders) {
-            statisticsTable.innerHTML = '';
-            totalSales = 0;
-            orders.forEach((order, index) => {
-                const row = statisticsTable.insertRow();
-                row.insertCell(0).innerText = index + 1;
-                row.insertCell(1).innerText = order.tableNumber;
-                row.insertCell(2).innerText = new Date(order.timestamp).toLocaleString();
-                row.insertCell(3).innerText = order.totalPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';
-                totalSales += order.totalPrice;
-            });
-            totalSalesElement.innerText = `총 매출: ${totalSales.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}원`;
+        function formatPrice(price) {
+            return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';
         }
-
-        // Request the saved orders from the WebSocket server on page load
-        ws.onopen = function() {
-            ws.send(JSON.stringify({ request: 'savedOrders' }));
-        };
+        function loadStatistics() {
+            const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+            const statisticsTableBody = document.getElementById('statisticsTableBody');
+            statisticsTableBody.innerHTML = '';
+            savedOrders.forEach((order, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${order.tableNumber}</td>
+                    <td>${new Date(order.time).toLocaleString()}</td>
+                    <td>${formatPrice(order.totalPrice)}</td>
+                `;
+                statisticsTableBody.appendChild(row);
+            });
+        }
+        function resetData() {
+            if (confirm('정말로 주문 내역을 초기화하시겠습니까?')) {
+                localStorage.removeItem('savedOrders');
+                loadStatistics();
+                const ws = new WebSocket('wss://restaurant-order-1.onrender.com');
+                ws.onopen = function() {
+                    ws.send(JSON.stringify({ action: 'reset' }));
+                };
+            }
+        }
+        loadStatistics();
     </script>
 </body>
 </html>
