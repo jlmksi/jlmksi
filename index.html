@@ -329,14 +329,14 @@
                 if (confirmOrder) {
                     alert('주문이 완료되었습니다');
                     saveOrder(tableNumber, orders, totalPrice);
-                    ws.send(JSON.stringify({ tableNumber, orders, totalPrice })); // Send order to WebSocket server
+                    ws.send(JSON.stringify({ tableNumber, orders, totalPrice, timestamp: new Date().toISOString() })); // Send order to WebSocket server
                     location.reload(); // Reset the page after order is completed
                 }
             }
         }
         function saveOrder(tableNumber, orders, totalPrice) {
             const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
-            savedOrders.push({ tableNumber, orders, totalPrice });
+            savedOrders.push({ tableNumber, orders, totalPrice, timestamp: new Date().toISOString() });
             localStorage.setItem('savedOrders', JSON.stringify(savedOrders));
         }
 
