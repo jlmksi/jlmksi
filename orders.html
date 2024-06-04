@@ -105,7 +105,7 @@
         <div id="ordersList"></div>
     </div>
     <script>
-        const ws = new WebSocket('wss://restaurant-order-1.onrender.com');
+        const ws = new WebSocket('wss://restaurant-order-1.onrender.com'); // 웹소켓 주소 수정
         const ordersList = document.getElementById('ordersList');
 
         ws.onmessage = function(event) {
@@ -113,7 +113,7 @@
             if (data.action === 'savedOrders') {
                 displayOrders(data.orders);
             } else {
-                displayOrders([data]);
+                displayOrders([data.order]);
             }
         };
 
