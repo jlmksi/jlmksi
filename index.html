@@ -328,15 +328,16 @@
                 const confirmOrder = confirm(`${orderSummary}\n\n주문을 완료하시겠습니까?`);
                 if (confirmOrder) {
                     alert('주문이 완료되었습니다');
-                    saveOrder(tableNumber, orders, totalPrice);
-                    ws.send(JSON.stringify({ tableNumber, orders, totalPrice })); // Send order to WebSocket server
+                    const timestamp = new Date().toISOString(); // Add timestamp
+                    saveOrder(tableNumber, orders, totalPrice, timestamp);
+                    ws.send(JSON.stringify({ tableNumber, orders, totalPrice, timestamp })); // Send order to WebSocket server
                     location.reload(); // Reset the page after order is completed
                 }
             }
         }
-        function saveOrder(tableNumber, orders, totalPrice) {
+        function saveOrder(tableNumber, orders, totalPrice, timestamp) {
             const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
-            savedOrders.push({ tableNumber, orders, totalPrice });
+            savedOrders.push({ tableNumber, orders, totalPrice, timestamp });
             localStorage.setItem('savedOrders', JSON.stringify(savedOrders));
         }
 
