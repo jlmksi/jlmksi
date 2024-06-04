@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
 const admin = require('firebase-admin');
+const cors = require('cors');
 const serviceAccount = require('./restaurant-order-9fd1f-firebase-adminsdk-fy5vk-4389fcc104.json');
 
 // Firebase 초기화
@@ -14,6 +15,8 @@ const db = admin.database();
 const ordersRef = db.ref('orders');
 
 const app = express();
+app.use(cors());
+
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
