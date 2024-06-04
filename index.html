@@ -162,6 +162,11 @@
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@1.31.0/dist/umd/supabase.min.js"></script>
+    <script>
+        const supabaseUrl = 'https://gpsupybqyhijihabqcyx.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdwc3VweWJxeWhpamloYWJxY3l4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTc1Mjk3MzMsImV4cCI6MjAzMzEwNTczM30.OdQODIBP918QRVWoKtQi6dr41HGnWyva7ajWWe0FJ4g';
+        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+    </script>
 </head>
 <body>
     <header style="height: 120px;">
@@ -186,10 +191,6 @@
         </aside>
     </div>
     <script>
-        const supabaseUrl = 'https://gpsupybqyhijihabqcyx.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdwc3VweWJxeWhpamloYWJxY3l4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTc1Mjk3MzMsImV4cCI6MjAzMzEwNTczM30.OdQODIBP918QRVWoKtQi6dr41HGnWyva7ajWWe0FJ4g';
-        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
-
         const menuContainer = document.getElementById('menuContainer');
         const orderList = document.getElementById('orderList');
         const totalPriceElement = document.getElementById('totalPrice');
