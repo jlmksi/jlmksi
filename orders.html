@@ -88,7 +88,6 @@
             padding: 0.5em 1em;
             cursor: pointer;
             border-radius: 5px;
-            margin-top: 10px;
             position: absolute;
             top: 70px;
             right: 10px;
@@ -105,23 +104,6 @@
             right: 10px;
         }
     </style>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyC3FKMzBKOqxKnYIJeU7TimVsZDeOZ2K64",
-            authDomain: "restaurant-order-9fd1f.firebaseapp.com",
-            projectId: "restaurant-order-9fd1f",
-            storageBucket: "restaurant-order-9fd1f.appspot.com",
-            messagingSenderId: "911452281381",
-            appId: "1:911452281381:web:14d56045f7a2b00ace3dcc",
-            measurementId: "G-VFB4GPC024",
-            databaseURL: "https://restaurant-order-9fd1f.firebaseio.com"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-        const ordersRef = db.ref('/orders');
-    </script>
 </head>
 <body>
     <header>
@@ -134,9 +116,8 @@
         <div id="ordersList"></div>
     </div>
     <script>
-        const ordersList = document.getElementById('ordersList');
-
         const ws = new WebSocket('wss://restaurant-order-1.onrender.com');
+        const ordersList = document.getElementById('ordersList');
 
         ws.onmessage = function(event) {
             const data = JSON.parse(event.data);
@@ -145,8 +126,7 @@
 
         function displayOrders(orders) {
             ordersList.innerHTML = '';
-            Object.keys(orders).forEach((key, index) => {
-                const order = orders[key];
+            orders.forEach((order, index) => {
                 const orderItem = document.createElement('div');
                 orderItem.className = 'order-item';
                 let orderDetails = `<h3>주문 번호: ${index + 1}</h3>`;
@@ -158,45 +138,41 @@
                 }
                 orderDetails += `</ul></div><div class="order-total">총 금액: ${order.totalPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}원</div>`;
                 orderItem.innerHTML = orderDetails;
+                
                 const cancelButton = document.createElement('button');
                 cancelButton.className = 'cancel-button';
                 cancelButton.textContent = '주문 취소';
-                cancelButton.onclick = () => cancelOrder(key);
+                cancelButton.onclick = () => cancelOrder(index);
                 orderItem.appendChild(cancelButton);
+
                 ordersList.appendChild(orderItem);
             });
         }
 
-        function cancelOrder(key) {
-            if (confirm('정말로 주문을 취소하시겠습니까?')) {
-                ordersRef.child(key).remove();
-                loadOrders();
+        function cancelOrder(index) {
+            if (confirm('정말로 이 주문을 취소하시겠습니까?')) {
+                const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+                savedOrders.splice(index, 1);
+                localStorage.setItem('savedOrders', JSON.stringify(savedOrders));
+                ws.send(JSON.stringify({ action: 'delete', index: index }));
+                displayOrders(savedOrders);
+                alert('주문이 취소되었습니다.');
             }
         }
 
         function resetOrders() {
             if (confirm('정말로 주문 내역을 초기화하시겠습니까?')) {
-                ordersRef.remove();
+                localStorage.removeItem('savedOrders');
                 ordersList.innerHTML = '';
+                ws.send(JSON.stringify({ action: 'reset' }));
                 alert('주문 내역이 초기화되었습니다.');
             }
         }
 
-        function loadOrders() {
-            ordersRef.once('value', (snapshot) => {
-                const orders = snapshot.val() || {};
-                displayOrders(orders);
-            });
-        }
-
+        // Request the saved orders from the WebSocket server on page load
         ws.onopen = function() {
-            ordersRef.once('value', (snapshot) => {
-                const orders = snapshot.val() || {};
-                ws.send(JSON.stringify(orders));
-            });
+            ws.send(JSON.stringify({ request: 'savedOrders' }));
         };
-
-        loadOrders();
     </script>
 </body>
 </html>
