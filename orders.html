@@ -10,10 +10,14 @@
             background-color: #f8f8f8;
             margin: 0;
             padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
         header {
             background-color: #4CAF50;
             color: white;
+            width: 100%;
             text-align: center;
             padding: 1em 0;
             border-radius: 0 0 10px 10px;
@@ -27,8 +31,10 @@
             border-radius: 10px;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
             padding: 1em;
-            margin: auto;
             text-align: center;
+        }
+        .orders-container h2 {
+            margin-top: 0;
         }
         .order-item {
             background-color: #fff;
@@ -81,6 +87,7 @@
             padding: 0.5em 1em;
             cursor: pointer;
             border-radius: 5px;
+            margin-top: 10px;
             position: absolute;
             top: 60px;
             right: 10px;
@@ -97,71 +104,67 @@
         <h2>실시간 주문 내역</h2>
         <div id="ordersList"></div>
     </div>
+    <script src="https://unpkg.com/@supabase/supabase-js@1.28.0/dist/umd/supabase.min.js"></script>
     <script>
-        const ws = new WebSocket('wss://restaurant-order-1.onrender.com');
+        const SUPABASE_URL = 'https://gpsupybqyhijihabqcyx.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdwc3VweWJxeWhpamloYWJxY3l4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTc1Mjk3MzMsImV4cCI6MjAzMzEwNTczM30.OdQODIBP918QRVWoKtQi6dr41HGnWyva7ajWWe0FJ4g';
+
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const ws = new WebSocket('wss://your-server-url');
         const ordersList = document.getElementById('ordersList');
-
-        ws.onopen = function() {
-            console.log('WebSocket 연결 성공');
-            ws.send(JSON.stringify({ request: 'savedOrders' }));
-        };
-
-        ws.onerror = function(error) {
-            console.log('WebSocket 에러:', error);
-        };
 
         ws.onmessage = function(event) {
             const data = JSON.parse(event.data);
-            if (data.action === 'newOrder') {
-                displayOrder(data.order);
-            } else if (data.action === 'savedOrders') {
+            if (data.action === 'savedOrders') {
                 displayOrders(data.orders);
+            } else if (data.action === 'newOrder') {
+                addOrder(data.order);
             }
         };
 
-        function displayOrder(order) {
-            const orderItem = document.createElement('div');
-            orderItem.className = 'order-item';
-            let orderDetails = `<h3>주문 번호: ${order.tableNumber}</h3>`;
-            orderDetails += `<p>주문 시간: ${new Date(order.timestamp).toLocaleString()}</p>`;
-            orderDetails += `<p>테이블 번호: ${order.tableNumber}</p>`;
-            orderDetails += `<div class="order-details"><p>주문 내역:</p><ul>`;
-            for (const name in order.orders) {
-                orderDetails += `<li>${name}: ${order.orders[name].quantity}개</li>`;
-            }
-            orderDetails += `</ul></div><div class="order-total">총 금액: ${order.totalPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}원</div>`;
-            orderItem.innerHTML = orderDetails;
-            const cancelButton = document.createElement('button');
-            cancelButton.className = 'cancel-button';
-            cancelButton.textContent = '주문 취소';
-            cancelButton.onclick = () => cancelOrder(orderItem, order);
-            orderItem.appendChild(cancelButton);
-            ordersList.appendChild(orderItem);
-        }
-
-        function displayOrders(orders) {
+        async function displayOrders(orders) {
             ordersList.innerHTML = '';
-            orders.forEach(order => {
-                displayOrder(order);
+            orders.forEach((order, index) => {
+                const orderItem = document.createElement('div');
+                orderItem.className = 'order-item';
+                let orderDetails = `<h3>주문 번호: ${index + 1}</h3>`;
+                orderDetails += `<p>주문 시간: ${new Date(order.timestamp).toLocaleString()}</p>`;
+                orderDetails += `<p>테이블 번호: ${order.tableNumber}</p>`;
+                orderDetails += `<div class="order-details"><p>주문 내역:</p><ul>`;
+                for (const name in order.orders) {
+                    orderDetails += `<li>${name}: ${order.orders[name].quantity}개</li>`;
+                }
+                orderDetails += `</ul></div><div class="order-total">총 금액: ${order.totalPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}원</div>`;
+                orderDetails += `<button class="delete-button" onclick="deleteOrder(${order.id})">주문 취소</button>`;
+                orderItem.innerHTML = orderDetails;
+                ordersList.appendChild(orderItem);
             });
         }
 
-        function cancelOrder(orderItem, order) {
-            if (confirm('정말로 이 주문을 취소하시겠습니까?')) {
-                const index = Array.from(ordersList.children).indexOf(orderItem);
-                ws.send(JSON.stringify({ action: 'delete', index }));
-                orderItem.remove();
-                alert('주문이 취소되었습니다.');
+        async function deleteOrder(id) {
+            if (confirm('정말로 주문을 취소하시겠습니까?')) {
+                await supabase
+                    .from('orders')
+                    .delete()
+                    .eq('id', id);
+                ws.send(JSON.stringify({ action: 'delete', id }));
+                location.reload();
             }
         }
 
-        function resetOrders() {
+        async function resetOrders() {
             if (confirm('정말로 주문 내역을 초기화하시겠습니까?')) {
+                await supabase
+                    .from('orders')
+                    .delete();
                 ws.send(JSON.stringify({ action: 'reset' }));
-                ordersList.innerHTML = '';
-                alert('주문 내역이 초기화되었습니다.');
+                location.reload();
             }
         }
+
+        ws.onopen = function() {
+            ws.send(JSON.stringify({ request: 'savedOrders' }));
+        };
     </script>
 </body>
 </html>
