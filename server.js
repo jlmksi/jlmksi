@@ -1,52 +1,56 @@
-const firebase = require('firebase-admin');
-const serviceAccount = require('./serviceAccountKey.json');
-
-firebase.initializeApp({
-  credential: firebase.credential.cert(serviceAccount),
-  databaseURL: "https://restaurant-order-9fd1f.firebaseio.com"
-});
-
-const db = firebase.database();
-const ref = db.ref("/orders");
-
-const WebSocket = require('ws');
+const express = require('express');
 const http = require('http');
+const WebSocket = require('ws');
+const { createClient } = require('@supabase/supabase-js');
 
-const server = http.createServer((req, res) => {
-  res.writeHead(200);
-  res.end('WebSocket server is running');
-});
+const SUPABASE_URL = 'https://gpsupybqyhijihabqcyx.supabase.co';
+const SUPABASE_KEY = 'YOUR_SUPABASE_SERVICE_ROLE_KEY';
 
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const app = express();
+const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-wss.on('connection', (ws) => {
-  console.log('Client connected');
-
-  ws.on('message', (message) => {
+wss.on('connection', ws => {
+  ws.on('message', async message => {
     const data = JSON.parse(message);
-    if (data.action === 'newOrder') {
-      ref.push(data.order);
-    } else if (data.action === 'cancelOrder') {
-      ref.child(data.orderId).remove();
-    } else if (data.action === 'resetOrders') {
-      ref.remove();
-    }
-  });
 
-  ws.on('close', () => {
-    console.log('Client disconnected');
+    if (data.request === 'savedOrders') {
+      const { data: orders, error } = await supabase
+        .from('orders')
+        .select('*');
+      if (error) {
+        console.error('Error fetching orders:', error);
+        return;
+      }
+      ws.send(JSON.stringify({ action: 'savedOrders', orders }));
+    } else if (data.action === 'delete') {
+      await supabase
+        .from('orders')
+        .delete()
+        .eq('id', data.id);
+    } else {
+      const { error } = await supabase
+        .from('orders')
+        .insert([data]);
+      if (error) {
+        console.error('Error inserting order:', error);
+        return;
+      }
+      wss.clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({ action: 'newOrder', order: data }));
+        }
+      });
+    }
   });
 });
 
-server.listen(8080, () => {
-  console.log('Server is listening on port 8080');
+app.get('/', (req, res) => {
+  res.send('Server is running');
 });
 
-ref.on('value', (snapshot) => {
-  const orders = snapshot.val();
-  wss.clients.forEach((client) => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(JSON.stringify(orders));
-    }
-  });
+server.listen(3000, () => {
+  console.log('Server is listening on port 3000');
 });
