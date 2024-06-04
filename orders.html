@@ -123,6 +123,12 @@
             const data = JSON.parse(event.data);
             if (data.action === 'savedOrders') {
                 displayOrders(data.orders);
+            } else {
+                // New order received
+                const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+                savedOrders.push(data);
+                localStorage.setItem('savedOrders', JSON.stringify(savedOrders));
+                displayOrders(savedOrders);
             }
         };
 
