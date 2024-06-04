@@ -31,53 +31,75 @@
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
             padding: 1em;
             text-align: center;
+            overflow-x: auto;
         }
-        .statistics-container h2 {
-            margin-top: 0;
+        table {
+            width: 100%;
+            border-collapse: collapse;
         }
-        .statistics-item {
-            margin: 1em 0;
-            font-size: 1.2em;
+        th, td {
+            padding: 1em;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+        th.order-number, td.order-number {
+            width: 10%; /* 너비를 절반으로 줄였습니다 */
+        }
+        th.table-number, td.table-number {
+            width: 10%; /* 너비를 절반으로 줄였습니다 */
+        }
+        .total-sales {
+            font-size: 1.5em;
+            margin-top: 1em;
         }
     </style>
 </head>
 <body>
     <header>
-        <h1>세광교회 바자회 통계 페이지</h1>
+        <h1>통계 페이지</h1>
     </header>
     <div class="statistics-container">
-        <h2>판매 통계</h2>
-        <div class="statistics-item" id="totalItemsSold">총 판매 개수: 0</div>
-        <div class="statistics-item" id="totalRevenue">총 매출: 0원</div>
+        <h2>주문 통계</h2>
+        <table id="statisticsTable">
+            <thead>
+                <tr>
+                    <th class="order-number">주문 번호</th>
+                    <th class="table-number">테이블 번호</th>
+                    <th>주문 시간</th>
+                    <th>총 금액</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+        <div class="total-sales" id="totalSales">총 매출: 0원</div>
     </div>
     <script>
         const ws = new WebSocket('wss://restaurant-order-1.onrender.com');
+        const statisticsTable = document.getElementById('statisticsTable').getElementsByTagName('tbody')[0];
+        const totalSalesElement = document.getElementById('totalSales');
+        let totalSales = 0;
 
         ws.onmessage = function(event) {
             const data = JSON.parse(event.data);
-            updateStatistics(data);
+            displayStatistics(data);
         };
 
-        function updateStatistics(data) {
-            let totalItemsSold = 0;
-            let totalRevenue = 0;
-
-            if (Array.isArray(data)) {
-                data.forEach(order => {
-                    for (const name in order.orders) {
-                        totalItemsSold += order.orders[name].quantity;
-                        totalRevenue += order.orders[name].price * order.orders[name].quantity;
-                    }
-                });
-            } else {
-                for (const name in data.orders) {
-                    totalItemsSold += data.orders[name].quantity;
-                    totalRevenue += data.orders[name].price * data.orders[name].quantity;
-                }
-            }
-
-            document.getElementById('totalItemsSold').textContent = `총 판매 개수: ${totalItemsSold}`;
-            document.getElementById('totalRevenue').textContent = `총 매출: ${totalRevenue.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}원`;
+        function displayStatistics(orders) {
+            statisticsTable.innerHTML = '';
+            totalSales = 0;
+            orders.forEach((order, index) => {
+                const row = statisticsTable.insertRow();
+                row.insertCell(0).innerText = index + 1;
+                row.insertCell(1).innerText = order.tableNumber;
+                row.insertCell(2).innerText = new Date(order.timestamp).toLocaleString();
+                row.insertCell(3).innerText = order.totalPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';
+                totalSales += order.totalPrice;
+            });
+            totalSalesElement.innerText = `총 매출: ${totalSales.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}원`;
         }
 
         // Request the saved orders from the WebSocket server on page load
