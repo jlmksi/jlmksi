@@ -113,7 +113,7 @@
             const data = JSON.parse(event.data);
             if (data.action === 'newOrder') {
                 alert('새로운 주문이 들어왔습니다!');
-                new Audio('notification_sound.mp3').play();
+                new Audio('https://your-server-address/bell.mp3').play(); // 벨소리 파일 경로를 맞게 설정하세요
                 addOrder(data.order);
             } else if (data.action === 'savedOrders') {
                 loadOrders(data.orders);
@@ -131,9 +131,12 @@
             const orderItem = document.createElement('div');
             orderItem.className = 'order-item';
             let orderDetails = `<h3>테이블 번호: ${order.tableNumber}</h3>`;
+            orderDetails += `<p>주문 시간: ${new Date(order.timestamp).toLocaleString()}</p>`;
+            orderDetails += `<div class="order-details"><p>주문 내역:</p><ul>`;
             for (const name in order.orders) {
-                orderDetails += `<p>${name}: ${order.orders[name].quantity}개</p>`;
+                orderDetails += `<li>${name}: ${order.orders[name].quantity}개</li>`;
             }
+            orderDetails += `</ul></div><div class="order-total">총 금액: ${order.totalPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}원</div>`;
             orderItem.innerHTML = orderDetails;
             const completeButton = document.createElement('button');
             completeButton.className = 'complete-button';
