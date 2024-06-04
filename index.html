@@ -161,222 +161,6 @@
             justify-content: center;
         }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-    <script>
-        // Supabase 초기화
-        const supabaseUrl = 'https://gpsupybqyhijihabqcyx.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdwc3VweWJxeWhpamloYWJxY3l4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTc1Mjk3MzMsImV4cCI6MjAzMzEwNTczM30.OdQODIBP918QRVWoKtQi6dr41HGnWyva7ajWWe0FJ4g';
-        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
-
-        document.addEventListener('DOMContentLoaded', () => {
-            const menuContainer = document.getElementById('menuContainer');
-            const orderList = document.getElementById('orderList');
-            const totalPriceElement = document.getElementById('totalPrice');
-            let totalPrice = 0;
-            const orders = {};
-            let menu = [];
-
-            // 가격 포맷팅 함수
-            function formatPrice(price) {
-                return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';
-            }
-
-            // 메뉴 렌더링 함수
-            async function renderMenu() {
-                menuContainer.innerHTML = '';
-                const { data: menuData, error } = await supabase
-                    .from('menu')
-                    .select('*');
-
-                if (error) {
-                    console.error('메뉴를 불러오는 중 오류가 발생했습니다:', error);
-                    return;
-                }
-
-                menu = menuData;
-
-                menu.forEach(item => {
-                    const menuItem = document.createElement('div');
-                    menuItem.className = 'menu-item';
-                    menuItem.setAttribute('data-name', item.name);
-                    menuItem.setAttribute('data-price', item.price);
-                    menuItem.setAttribute('onclick', `orderItem('${item.name}', ${item.price})`);
-                    menuItem.innerHTML = `
-                        <button>${item.name}</button>
-                        <p>${formatPrice(item.price)}</p>
-                        <div>
-                            <button class="edit-button" onclick="editItem(event, this)">메뉴 수정</button>
-                            <button class="delete-button" onclick="deleteMenuItem(event, '${item.name}')">메뉴 삭제</button>
-                        </div>
-                    `;
-                    menuContainer.appendChild(menuItem);
-                });
-            }
-
-            // 주문 아이템 추가 함수
-            function orderItem(name, price) {
-                if (!orders[name]) {
-                    orders[name] = { price: price, quantity: 0 };
-                    addOrderToList(name);
-                }
-                orders[name].quantity++;
-                updateOrderList();
-                totalPrice += price;
-                updateTotalPrice();
-            }
-
-            // 주문 목록에 추가하는 함수
-            function addOrderToList(name) {
-                const listItem = document.createElement('li');
-                listItem.id = `order-${name}`;
-                listItem.innerHTML = `
-                    <span>${name} - ${formatPrice(orders[name].price)}</span>
-                    <div class="quantity-controls">
-                        <button class="delete-button" onclick="deleteItem('${name}')">지우기</button>
-                        <button onclick="updateQuantity('${name}', -1)">-</button>
-                        <span id="quantity-${name}">0</span>
-                        <button onclick="updateQuantity('${name}', 1)">+</button>
-                    </div>
-                `;
-                orderList.appendChild(listItem);
-            }
-
-            // 수량 업데이트 함수
-            function updateQuantity(name, change) {
-                const newQuantity = orders[name].quantity + change;
-                if (newQuantity >= 0) {
-                    totalPrice += orders[name].price * change;
-                    orders[name].quantity = newQuantity;
-                    document.getElementById(`quantity-${name}`).textContent = newQuantity;
-                    if (newQuantity === 0) {
-                        document.getElementById(`order-${name}`).remove();
-                        delete orders[name];
-                    }
-                    updateTotalPrice();
-                }
-            }
-
-            // 주문 항목 삭제 함수
-            function deleteItem(name) {
-                totalPrice -= orders[name].price * orders[name].quantity;
-                document.getElementById(`order-${name}`).remove();
-                delete orders[name];
-                updateTotalPrice();
-            }
-
-            // 주문 목록 업데이트 함수
-            function updateOrderList() {
-                for (const name in orders) {
-                    document.getElementById(`quantity-${name}`).textContent = orders[name].quantity;
-                }
-            }
-
-            // 총 금액 업데이트 함수
-            function updateTotalPrice() {
-                totalPriceElement.textContent = `총 금액: ${formatPrice(totalPrice)}`;
-            }
-
-            // 메뉴 수정 함수
-            function editItem(event, button) {
-                event.stopPropagation();
-                const menuItem = button.parentElement.parentElement;
-                const name = menuItem.getAttribute('data-name');
-                const price = menuItem.getAttribute('data-price');
-                const newName = prompt('새로운 메뉴 이름을 입력하세요:', name);
-                const newPrice = prompt('새로운 가격을 입력하세요:', price);
-                if (newName && newPrice) {
-                    menuItem.setAttribute('data-name', newName);
-                    menuItem.setAttribute('data-price', newPrice);
-                    menuItem.querySelector('button').textContent = newName;
-                    menuItem.querySelector('p').textContent = formatPrice(newPrice);
-                    menuItem.setAttribute('onclick', `orderItem('${newName}', ${newPrice})`);
-                    const index = menu.findIndex(item => item.name === name);
-                    menu[index] = { name: newName, price: parseInt(newPrice) };
-                    saveMenu();
-                }
-            }
-
-            // 메뉴 삭제 함수
-            async function deleteMenuItem(event, name) {
-                event.stopPropagation();
-                if (confirm('삭제하시겠습니까?')) {
-                    const { error } = await supabase
-                        .from('menu')
-                        .delete()
-                        .eq('name', name);
-
-                    if (error) {
-                        console.error('메뉴 삭제 중 오류가 발생했습니다:', error);
-                        return;
-                    }
-
-                    const index = menu.findIndex(item => item.name === name);
-                    menu.splice(index, 1);
-                    renderMenu();
-                }
-            }
-
-            // 메뉴 항목 추가 함수
-            async function addMenuItem() {
-                const newName = prompt('새로운 메뉴 이름을 입력하세요:');
-                const newPrice = prompt('새로운 가격을 입력하세요:');
-                if (newName && newPrice) {
-                    const { data, error } = await supabase
-                        .from('menu')
-                        .insert([{ name: newName, price: parseInt(newPrice) }]);
-
-                    if (error) {
-                        console.error('메뉴 추가 중 오류가 발생했습니다:', error);
-                        return;
-                    }
-
-                    menu.push({ name: newName, price: parseInt(newPrice) });
-                    renderMenu();
-                }
-            }
-
-            // 메뉴 저장 함수
-            async function saveMenu() {
-                localStorage.setItem('menu', JSON.stringify(menu));
-                alert('메뉴가 저장되었습니다');
-            }
-
-            // 주문 결정 함수
-            async function finalizeOrder() {
-                const tableNumber = prompt('테이블 번호를 입력하세요:');
-                if (tableNumber) {
-                    let orderSummary = `테이블 번호: ${tableNumber}\n\n`;
-                    let totalQuantity = 0;
-                    for (const name in orders) {
-                        orderSummary += `${name}: ${orders[name].quantity}개\n`;
-                        totalQuantity += orders[name].quantity;
-                    }
-                    orderSummary += `\n총 금액: ${formatPrice(totalPrice)}`;
-                    const confirmOrder = confirm(`${orderSummary}\n\n주문을 완료하시겠습니까?`);
-                    if (confirmOrder) {
-                        alert('주문이 완료되었습니다');
-                        await saveOrder(tableNumber, orders, totalPrice);
-                        location.reload(); // Reset the page after order is completed
-                    }
-                }
-            }
-
-            // 주문 저장 함수
-            async function saveOrder(tableNumber, orders, totalPrice) {
-                const { data, error } = await supabase
-                    .from('orders')
-                    .insert([{ tableNumber, orders, totalPrice }]);
-
-                if (error) {
-                    console.error('주문 저장 중 오류가 발생했습니다:', error);
-                    return;
-                }
-            }
-
-            // 메뉴 렌더링 호출
-            renderMenu();
-        });
-    </script>
 </head>
 <body>
     <header style="height: 120px;">
@@ -400,5 +184,176 @@
             <button class="finalize-order-button" onclick="finalizeOrder()">주문 결정</button>
         </aside>
     </div>
+    <script>
+        const menuContainer = document.getElementById('menuContainer');
+        const orderList = document.getElementById('orderList');
+        const totalPriceElement = document.getElementById('totalPrice');
+        let totalPrice = 0;
+        const orders = {};
+        let menu = JSON.parse(localStorage.getItem('menu')) || [
+            { name: '메뉴1', price: 10000 },
+            { name: '메뉴2', price: 12000 },
+            { name: '메뉴3', price: 15000 }
+        ];
+        const ws = new WebSocket('wss://restaurant-order-1.onrender.com');
+        function formatPrice(price) {
+            return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';
+        }
+        function renderMenu() {
+            menuContainer.innerHTML = '';
+            menu.forEach(item => {
+                const menuItem = document.createElement('div');
+                menuItem.className = 'menu-item';
+                menuItem.setAttribute('data-name', item.name);
+                menuItem.setAttribute('data-price', item.price);
+                menuItem.setAttribute('onclick', `orderItem('${item.name}', ${item.price})`);
+                menuItem.innerHTML = `
+                    <button>${item.name}</button>
+                    <p>${formatPrice(item.price)}</p>
+                    <div>
+                        <button class="edit-button" onclick="editItem(event, this)">메뉴 수정</button>
+                        <button class="delete-button" onclick="deleteMenuItem(event, '${item.name}')">메뉴 삭제</button>
+                    </div>
+                `;
+                menuContainer.appendChild(menuItem);
+            });
+        }
+        function orderItem(name, price) {
+            if (!orders[name]) {
+                orders[name] = { price: price, quantity: 0 };
+                addOrderToList(name);
+            }
+            orders[name].quantity++;
+            updateOrderList();
+            totalPrice += price;
+            updateTotalPrice();
+            saveOrders();
+        }
+        function addOrderToList(name) {
+            const listItem = document.createElement('li');
+            listItem.id = `order-${name}`;
+            listItem.innerHTML = `
+                <span>${name} - ${formatPrice(orders[name].price)}</span>
+                <div class="quantity-controls">
+                    <button class="delete-button" onclick="deleteItem('${name}')">지우기</button>
+                    <button onclick="updateQuantity('${name}', -1)">-</button>
+                    <span id="quantity-${name}">0</span>
+                    <button onclick="updateQuantity('${name}', 1)">+</button>
+                </div>
+            `;
+            orderList.appendChild(listItem);
+        }
+        function updateQuantity(name, change) {
+            const newQuantity = orders[name].quantity + change;
+            if (newQuantity >= 0) {
+                totalPrice += orders[name].price * change;
+                orders[name].quantity = newQuantity;
+                document.getElementById(`quantity-${name}`).textContent = newQuantity;
+                if (newQuantity === 0) {
+                    document.getElementById(`order-${name}`).remove();
+                    delete orders[name];
+                }
+                updateTotalPrice();
+                saveOrders();
+            }
+        }
+        function deleteItem(name) {
+            totalPrice -= orders[name].price * orders[name].quantity;
+            document.getElementById(`order-${name}`).remove();
+            delete orders[name];
+            updateTotalPrice();
+            saveOrders();
+        }
+        function updateOrderList() {
+            for (const name in orders) {
+                document.getElementById(`quantity-${name}`).textContent = orders[name].quantity;
+            }
+        }
+        function updateTotalPrice() {
+            totalPriceElement.textContent = `총 금액: ${formatPrice(totalPrice)}`;
+        }
+        function editItem(event, button) {
+            event.stopPropagation();
+            const menuItem = button.parentElement.parentElement;
+            const name = menuItem.getAttribute('data-name');
+            const price = menuItem.getAttribute('data-price');
+            const newName = prompt('새로운 메뉴 이름을 입력하세요:', name);
+            const newPrice = prompt('새로운 가격을 입력하세요:', price);
+            if (newName && newPrice) {
+                menuItem.setAttribute('data-name', newName);
+                menuItem.setAttribute('data-price', newPrice);
+                menuItem.querySelector('button').textContent = newName;
+                menuItem.querySelector('p').textContent = formatPrice(newPrice);
+                menuItem.setAttribute('onclick', `orderItem('${newName}', ${newPrice})`);
+                const index = menu.findIndex(item => item.name === name);
+                menu[index] = { name: newName, price: parseInt(newPrice) };
+                saveMenu();
+            }
+        }
+        function deleteMenuItem(event, name) {
+            event.stopPropagation();
+            if (confirm('삭제하시겠습니까?')) {
+                const index = menu.findIndex(item => item.name === name);
+                menu.splice(index, 1);
+                renderMenu();
+                saveMenu();
+            }
+        }
+        function addMenuItem() {
+            const newName = prompt('새로운 메뉴 이름을 입력하세요:');
+            const newPrice = prompt('새로운 가격을 입력하세요:');
+            if (newName && newPrice) {
+                menu.push({ name: newName, price: parseInt(newPrice) });
+                renderMenu();
+                saveMenu();
+            }
+        }
+        function saveMenu() {
+            localStorage.setItem('menu', JSON.stringify(menu));
+            alert('메뉴가 저장되었습니다');
+        }
+        function saveOrders() {
+            localStorage.setItem('orders', JSON.stringify(orders));
+        }
+        function finalizeOrder() {
+            const tableNumber = prompt('테이블 번호를 입력하세요:');
+            if (tableNumber) {
+                let orderSummary = `테이블 번호: ${tableNumber}\n\n`;
+                let totalQuantity = 0;
+                for (const name in orders) {
+                    orderSummary += `${name}: ${orders[name].quantity}개\n`;
+                    totalQuantity += orders[name].quantity;
+                }
+                orderSummary += `\n총 금액: ${formatPrice(totalPrice)}`;
+                const confirmOrder = confirm(`${orderSummary}\n\n주문을 완료하시겠습니까?`);
+                if (confirmOrder) {
+                    alert('주문이 완료되었습니다');
+                    saveOrder(tableNumber, orders, totalPrice);
+                    ws.send(JSON.stringify({ tableNumber, orders, totalPrice })); // Send order to WebSocket server
+                    location.reload(); // Reset the page after order is completed
+                }
+            }
+        }
+        function saveOrder(tableNumber, orders, totalPrice) {
+            const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+            savedOrders.push({ tableNumber, orders, totalPrice });
+            localStorage.setItem('savedOrders', JSON.stringify(savedOrders));
+        }
+
+        // Add this function to send the saved orders to the WebSocket server on load
+        function sendSavedOrders() {
+            const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+            savedOrders.forEach(order => {
+                ws.send(JSON.stringify(order));
+            });
+        }
+
+        // Call the function to send saved orders on page load
+        ws.onopen = function() {
+            sendSavedOrders();
+        };
+
+        renderMenu();
+    </script>
 </body>
 </html>
