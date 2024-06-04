@@ -50,6 +50,7 @@ wss.on('connection', ws => {
         }
       });
     } else {
+      data.timestamp = Date.now(); // 주문 시간 타임스탬프 추가
       orders.push(data);
       ordersRef.set(orders);
       wss.clients.forEach(client => {
