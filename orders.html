@@ -14,41 +14,24 @@
         header {
             background-color: #4CAF50;
             color: white;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.3em 2em;
-            border-radius: 0 0 10px 10px;
+            padding: 1em;
+            text-align: center;
             position: relative;
         }
-        .icon-container {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            display: flex;
-            gap: 1px;
-        }
-        .container {
-            display: flex;
-            width: 100%;
-        }
         .order-container {
-            flex: 1;
-            padding: 1em;
             display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
+            flex-direction: column;
+            align-items: center;
+            padding: 2em;
         }
         .order-item {
             background-color: white;
             border: 1px solid #ddd;
-            margin: 0.5em;
+            border-radius: 10px;
+            margin: 1em;
             padding: 1em;
-            width: calc(25% - 1em);
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            width: 80%;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             position: relative;
         }
         .order-item h3 {
@@ -60,7 +43,7 @@
             font-size: 1.5em;
             font-weight: bold;
         }
-        .complete-button, .cancel-button {
+        .complete-button {
             background-color: #4CAF50;
             color: white;
             border: none;
@@ -70,10 +53,20 @@
             width: 100%;
             font-size: 1em;
         }
-        .cancel-button {
-            background-color: red;
-        }
-        .home-link {
+        .reset-button {
+    background-color: white;
+    color: red;
+    border: 1px solid red;
+    padding: 0.5em 1em;
+    cursor: pointer;
+    border-radius: 5px;
+    margin-top: 10px;
+    position: absolute;
+    top: 60px; /* 조금 위로 이동 */
+    right: 10px;
+}
+
+        .manage-link {
             background-color: #4CAF50;
             color: white;
             padding: 10px;
@@ -87,20 +80,19 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 10px;
+            position: absolute;
+            top: 10px;
+            right: 10px;
         }
     </style>
 </head>
 <body>
     <header>
         <h1>주문 내역</h1>
-        <div class="icon-container">
-            <a href="index.html" class="home-link">🏠</a>
-        </div>
+        <a href="index.html" class="manage-link">🏠</a>
+        <button class="reset-button" onclick="resetData()">주문 초기화</button>
     </header>
-    <div class="container">
-        <div class="order-container" id="orderContainer"></div>
-    </div>
+    <div class="order-container" id="orderContainer"></div>
     <script>
         const orderContainer = document.getElementById('orderContainer');
         const ws = new WebSocket('wss://restaurant-order-1.onrender.com');
@@ -127,32 +119,31 @@
                 completeButton.textContent = '완료';
                 completeButton.onclick = () => completeOrder(index);
                 orderItem.appendChild(completeButton);
-
-                const cancelButton = document.createElement('button');
-                cancelButton.className = 'cancel-button';
-                cancelButton.textContent = '취소';
-                cancelButton.onclick = () => cancelOrder(index);
-                orderItem.appendChild(cancelButton);
-
                 orderContainer.appendChild(orderItem);
             });
         }
 
         function completeOrder(index) {
-            if (confirm('주문을 완료하시겠습니까?')) {
+            if (confirm('삭제하시겠습니까?')) {
                 let savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
                 savedOrders.splice(index, 1);
                 localStorage.setItem('savedOrders', JSON.stringify(savedOrders));
                 loadOrders();
+                const ws = new WebSocket('wss://restaurant-order-1.onrender.com');
+                ws.onopen = function() {
+                    ws.send(JSON.stringify({ action: 'reset' }));
+                };
             }
         }
 
-        function cancelOrder(index) {
-            if (confirm('주문을 취소하시겠습니까?')) {
-                let savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
-                savedOrders.splice(index, 1);
-                localStorage.setItem('savedOrders', JSON.stringify(savedOrders));
+        function resetData() {
+            if (confirm('정말로 주문 내역을 초기화하시겠습니까?')) {
+                localStorage.removeItem('savedOrders');
                 loadOrders();
+                const ws = new WebSocket('wss://restaurant-order-1.onrender.com');
+                ws.onopen = function() {
+                    ws.send(JSON.stringify({ action: 'reset' }));
+                };
             }
         }
 
