@@ -41,7 +41,7 @@ wss.on('connection', ws => {
       ordersRef.set(orders);
       broadcastSavedOrders();
     } else {
-      data.timestamp = Date.now(); // 주문 시간 타임스탬프 추가
+      data.timestamp = new Date().toISOString(); // 주문 시간 타임스탬프 추가
       orders.push(data);
       ordersRef.set(orders);
       broadcastNewOrder(data);
