@@ -65,29 +65,11 @@
         }
         .total-price {
             text-align: right;
-            font-size: 1.5em;
-            font-weight: bold;
+            font-size: 2em;
             margin-top: 1em;
-            margin-right: 10px;
+            margin-right: 1em;
         }
     </style>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyC3FKMzBKOqxKnYIJeU7TimVsZDeOZ2K64",
-            authDomain: "restaurant-order-9fd1f.firebaseapp.com",
-            projectId: "restaurant-order-9fd1f",
-            storageBucket: "restaurant-order-9fd1f.appspot.com",
-            messagingSenderId: "911452281381",
-            appId: "1:911452281381:web:14d56045f7a2b00ace3dcc",
-            measurementId: "G-VFB4GPC024",
-            databaseURL: "https://restaurant-order-9fd1f.firebaseio.com"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-        const ordersRef = db.ref('/orders');
-    </script>
 </head>
 <body>
     <header>
@@ -113,47 +95,46 @@
             return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';
         }
 
-        function formatDate(timestamp) {
-            const date = new Date(timestamp);
+        function formatDate(dateString) {
+            const date = new Date(dateString);
             return date.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
         }
 
         function loadStatistics() {
             const statisticsBody = document.getElementById('statisticsBody');
             const totalRevenueElement = document.getElementById('totalRevenue');
+            let savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
             let totalRevenue = 0;
 
-            ordersRef.once('value', (snapshot) => {
-                const orders = snapshot.val() || {};
-                statisticsBody.innerHTML = '';
-                Object.keys(orders).forEach((key, index) => {
-                    const order = orders[key];
-                    if (!order.tableNumber || !order.totalPrice || isNaN(order.totalPrice)) {
-                        return; // 잘못된 데이터 건너뜀
-                    }
-                    const row = document.createElement('tr');
-                    let orderDetails = '';
-                    for (const item in order.orders) {
-                        orderDetails += `${item} ${order.orders[item].quantity}개<br>`;
-                    }
-                    row.innerHTML = `
-                        <td>${index + 1}</td>
-                        <td>${order.tableNumber}</td>
-                        <td>${formatDate(order.timestamp)}</td>
-                        <td>${orderDetails}</td>
-                        <td>${formatPrice(order.totalPrice)}</td>
-                    `;
-                    statisticsBody.appendChild(row);
-                    totalRevenue += order.totalPrice;
-                });
-
-                totalRevenueElement.textContent = `총 매출: ${formatPrice(totalRevenue)}`;
+            statisticsBody.innerHTML = '';
+            savedOrders.forEach((order, index) => {
+                if (!order.tableNumber || !order.totalPrice || isNaN(order.totalPrice)) {
+                    return; // 잘못된 데이터 건너뜀
+                }
+                const row = document.createElement('tr');
+                const orderTime = formatDate(order.time || new Date());
+                let orderDetails = '';
+                for (const item in order.orders) {
+                    orderDetails += `${item} ${order.orders[item].quantity}개<br>`;
+                }
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${order.tableNumber}</td>
+                    <td>${orderTime}</td>
+                    <td>${orderDetails}</td>
+                    <td>${formatPrice(order.totalPrice)}</td>
+                `;
+                statisticsBody.appendChild(row);
+                totalRevenue += order.totalPrice;
             });
+
+            totalRevenueElement.textContent = `총 매출: ${formatPrice(totalRevenue)}`;
         }
 
         function resetOrders() {
             if (confirm('모든 주문을 초기화하시겠습니까?')) {
-                ordersRef.remove();
+                localStorage.removeItem('savedOrders');
+                localStorage.removeItem('orders');
                 loadStatistics();
                 alert('주문이 초기화되었습니다');
             }
