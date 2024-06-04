@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>식당 관리 페이지</title>
+    <title>주문 관리</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -85,6 +85,23 @@
             justify-content: center;
         }
     </style>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyC3FKMzBKOqxKnYIJeU7TimVsZDeOZ2K64",
+            authDomain: "restaurant-order-9fd1f.firebaseapp.com",
+            projectId: "restaurant-order-9fd1f",
+            storageBucket: "restaurant-order-9fd1f.appspot.com",
+            messagingSenderId: "911452281381",
+            appId: "1:911452281381:web:14d56045f7a2b00ace3dcc",
+            measurementId: "G-VFB4GPC024",
+            databaseURL: "https://restaurant-order-9fd1f.firebaseio.com"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const ordersRef = db.ref('/orders');
+    </script>
 </head>
 <body>
     <header>
@@ -98,18 +115,16 @@
     </div>
     <script>
         const orderContainer = document.getElementById('orderContainer');
-        const ws = new WebSocket('wss://restaurant-order-1.onrender.com');
 
-        ws.onmessage = (event) => {
-            const order = JSON.parse(event.data);
-            alert('새로운 주문이 들어왔습니다!');
-            loadOrders();
-        };
+        ordersRef.on('value', (snapshot) => {
+            const orders = snapshot.val();
+            loadOrders(orders);
+        });
 
-        function loadOrders() {
-            const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+        function loadOrders(orders) {
             orderContainer.innerHTML = '';
-            savedOrders.forEach((order, index) => {
+            Object.keys(orders).forEach((key, index) => {
+                const order = orders[key];
                 const orderItem = document.createElement('div');
                 orderItem.className = 'order-item';
                 let orderDetails = `<h3>테이블 번호: ${order.tableNumber}</h3>`;
@@ -120,22 +135,18 @@
                 const completeButton = document.createElement('button');
                 completeButton.className = 'complete-button';
                 completeButton.textContent = '완료';
-                completeButton.onclick = () => completeOrder(index);
+                completeButton.onclick = () => completeOrder(key);
                 orderItem.appendChild(completeButton);
                 orderContainer.appendChild(orderItem);
             });
         }
 
-        function completeOrder(index) {
-            if (confirm('삭제하시겠습니까?')) {
-                let savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
-                savedOrders.splice(index, 1);
-                localStorage.setItem('savedOrders', JSON.stringify(savedOrders));
-                loadOrders();
+        function completeOrder(orderId) {
+            if (confirm('이 주문을 완료하시겠습니까?')) {
+                ordersRef.child(orderId).remove();
+                alert('주문이 완료되었습니다.');
             }
         }
-
-        loadOrders();
     </script>
 </body>
 </html>
