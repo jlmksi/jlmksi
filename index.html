@@ -191,57 +191,7 @@
         const totalPriceElement = document.getElementById('totalPrice');
         let totalPrice = 0;
         const orders = {};
-        let menu = JSON.parse(localStorage.getItem('menu')) || [
-            { name: '메뉴1', price: 10000 },
-            { name: '메뉴2', price: 12000 },
-            { name: '메뉴3', price: 15000 }
-        ];
-        
-        const supabaseUrl = 'https://gpsupybqyhijihabqcyx.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdwc3VweWJxeWhpamloYWJxY3l4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTc1Mjk3MzMsImV4cCI6MjAzMzEwNTczM30.OdQODIBP918QRVWoKtQi6dr41HGnWyva7ajWWe0FJ4g';
-        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
-        
-        async function fetchMenu() {
-            let { data: menu, error } = await supabase
-                .from('menu')
-                .select('*');
-            if (error) console.error('Error fetching menu:', error);
-            return menu || [];
-        }
-        
-        async function fetchOrders() {
-            let { data: orders, error } = await supabase
-                .from('orders')
-                .select('*');
-            if (error) console.error('Error fetching orders:', error);
-            return orders || [];
-        }
-
-        async function saveMenu() {
-            await supabase
-                .from('menu')
-                .delete()
-                .neq('id', 0); // Delete all existing menu items
-            const { error } = await supabase
-                .from('menu')
-                .insert(menu);
-            if (error) {
-                console.error('Error saving menu:', error);
-            } else {
-                alert('메뉴가 저장되었습니다');
-            }
-        }
-        
-        async function saveOrder(tableNumber, orders, totalPrice) {
-            const { error } = await supabase
-                .from('orders')
-                .insert([{ tableNumber, orders, totalPrice }]);
-            if (error) console.error('Error saving order:', error);
-        }
-
-        function formatPrice(price) {
-            return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';
-        }
+        let menu = [];
 
         async function renderMenu() {
             menu = await fetchMenu();
@@ -367,7 +317,7 @@
             localStorage.setItem('orders', JSON.stringify(orders));
         }
 
-        function finalizeOrder() {
+        async function finalizeOrder() {
             const tableNumber = prompt('테이블 번호를 입력하세요:');
             if (tableNumber) {
                 let orderSummary = `테이블 번호: ${tableNumber}\n\n`;
@@ -380,7 +330,7 @@
                 const confirmOrder = confirm(`${orderSummary}\n\n주문을 완료하시겠습니까?`);
                 if (confirmOrder) {
                     alert('주문이 완료되었습니다');
-                    saveOrder(tableNumber, orders, totalPrice);
+                    await saveOrder(tableNumber, orders, totalPrice);
                     location.reload(); // Reset the page after order is completed
                 }
             }
