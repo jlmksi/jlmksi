@@ -119,10 +119,10 @@
 
         ws.onmessage = function(event) {
             const data = JSON.parse(event.data);
-            if (data.action === 'newOrder') {
-                displayOrder(data.order);
-            } else if (data.action === 'savedOrders') {
-                displayOrders(data.orders);
+            if (data.type === 'newOrder') {
+                displayOrder(data.data);
+            } else if (data.type === 'savedOrders') {
+                displayOrders(data.data);
             }
         };
 
@@ -143,7 +143,7 @@
 
         function displayOrders(orders) {
             ordersList.innerHTML = '';
-            orders.forEach(order => {
+            orders.forEach((order) => {
                 displayOrder(order);
             });
         }
