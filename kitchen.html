@@ -16,48 +16,54 @@
             color: white;
             padding: 1em;
             text-align: center;
-            border-radius: 0 0 10px 10px;
         }
-        .order-container {
+        .orders-container {
             display: flex;
             flex-wrap: wrap;
-            justify-content: space-around;
+            justify-content: center;
             padding: 1em;
         }
-        .order-card {
+        .order-item {
             background-color: white;
+            border: 1px solid #ddd;
             border-radius: 10px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            margin: 1em;
+            margin: 0.5em;
             padding: 1em;
             width: 200px;
-            height: 300px;
+            text-align: center;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            position: relative;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            font-size: 1.2em;
         }
-        .order-card button {
+        .order-item p {
+            margin: 0.5em 0;
+        }
+        .complete-button {
             background-color: #4CAF50;
             color: white;
             border: none;
             padding: 0.5em;
             cursor: pointer;
-            border-radius: 5px;
             font-size: 1em;
+            border-radius: 5px;
+        }
+        #notification {
+            display: none;
         }
         .popup {
             position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background-color: white;
-            padding: 2em;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 1em;
             border-radius: 10px;
-            z-index: 1000;
             text-align: center;
-            font-size: 1.5em;
+            display: none;
+            z-index: 1000;
         }
     </style>
 </head>
@@ -65,12 +71,14 @@
     <header>
         <h1>주방 주문</h1>
     </header>
-    <div class="order-container" id="orderContainer"></div>
-    <audio id="notificationSound" src="https://jlmksi.github.io/restaurant-order/assets/notification.mp3"></audio>
+    <div class="orders-container" id="ordersContainer"></div>
+
+    <audio id="notification" src="https://jlmksi.github.io/restaurant-order/assets/notification.mp3"></audio>
+    <div id="popup" class="popup">주문이 들어왔습니다!</div>
+
     <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore-compat.js"></script>
     <script>
-        // Firebase 설정
         const firebaseConfig = {
             apiKey: "AIzaSyCtRN3QMnHxLQEKAAn0y3q8qRvjDs8BKJA",
             authDomain: "restaurant-orders-new.firebaseapp.com",
@@ -81,40 +89,45 @@
             measurementId: "G-79XGTK3L3F"
         };
 
-        // Firebase 초기화
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        const orderContainer = document.getElementById('orderContainer');
-        const notificationSound = document.getElementById('notificationSound');
+        const ordersContainer = document.getElementById('ordersContainer');
+        const notification = document.getElementById('notification');
+        const popup = document.getElementById('popup');
 
-        function formatPrice(price) {
-            return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';
+        function playNotificationSound() {
+            notification.play().catch(error => {
+                console.error('Audio play failed:', error);
+            });
         }
 
-        function formatDate(timestamp) {
-            const date = new Date(timestamp);
-            return date.toLocaleString();
+        function showPopup() {
+            popup.style.display = 'block';
+            setTimeout(() => {
+                popup.style.display = 'none';
+            }, 5000);
         }
 
         function loadOrders() {
-            db.collection('orders').orderBy('time', 'asc').onSnapshot(snapshot => {
-                orderContainer.innerHTML = '';
+            db.collection('orders').orderBy('orderTime', 'asc').onSnapshot(snapshot => {
+                ordersContainer.innerHTML = '';
                 snapshot.forEach(doc => {
                     const order = doc.data();
-                    const orderCard = document.createElement('div');
-                    orderCard.classList.add('order-card');
-                    orderCard.innerHTML = `
-                        <div>
-                            <div>주문 번호: ${doc.id}</div>
-                            <div>테이블 번호: ${order.tableNumber}</div>
-                            <div>주문 시간: ${formatDate(order.time)}</div>
-                            <div>${Object.keys(order.orders).map(key => `${key} ${order.orders[key].quantity}개`).join('<br>')}</div>
-                        </div>
-                        <button onclick="completeOrder('${doc.id}')">완료</button>
+                    const orderItem = document.createElement('div');
+                    orderItem.className = 'order-item';
+                    orderItem.innerHTML = `
+                        <p>주문 번호: ${order.orderNumber}</p>
+                        <p>테이블 번호: ${order.tableNumber}</p>
+                        <p>${order.orders['메뉴1'] ? `메뉴1 ${order.orders['메뉴1'].quantity}개` : ''}</p>
+                        <p>${order.orders['메뉴2'] ? `메뉴2 ${order.orders['메뉴2'].quantity}개` : ''}</p>
+                        <p>${order.orders['메뉴3'] ? `메뉴3 ${order.orders['메뉴3'].quantity}개` : ''}</p>
+                        <button class="complete-button" onclick="completeOrder('${doc.id}')">완료</button>
                     `;
-                    orderContainer.appendChild(orderCard);
+                    ordersContainer.appendChild(orderItem);
                 });
+                playNotificationSound();
+                showPopup();
             });
         }
 
@@ -122,37 +135,12 @@
             db.collection('orders').doc(orderId).delete().then(() => {
                 console.log('Order completed');
             }).catch(error => {
-                console.error('Error removing document: ', error);
+                console.error('Error completing order: ', error);
             });
-        }
-
-        function playNotificationSound() {
-            notificationSound.play().catch(error => {
-                console.error('Audio play failed:', error);
-            });
-        }
-
-        db.collection('orders').orderBy('time', 'asc').onSnapshot(snapshot => {
-            snapshot.docChanges().forEach(change => {
-                if (change.type === 'added') {
-                    playNotificationSound();
-                    showPopup('주문이 들어왔습니다');
-                }
-            });
-        });
-
-        function showPopup(message) {
-            const popup = document.createElement('div');
-            popup.classList.add('popup');
-            popup.textContent = message;
-            document.body.appendChild(popup);
-            setTimeout(() => {
-                popup.remove();
-            }, 5000);
         }
 
         loadOrders();
-        setInterval(loadOrders, 5000); // 5초마다 새로고침
+        setInterval(loadOrders, 5000);
     </script>
 </body>
 </html>
