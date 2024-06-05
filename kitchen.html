@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>주방 주문</title>
+    <link rel="icon" href="favicon.ico">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -54,7 +55,7 @@
             justify-content: space-between;
             width: 200px; /* 박스 크기 */
             height: 200px; /* 박스 크기 */
-            font-size: 1.5em; /* 글씨 크기 */
+            font-size: 1.2em; /* 글씨 크기 */
         }
         .order-item button {
             background-color: #4CAF50;
@@ -133,19 +134,27 @@
         }
 
         function showAlertWithTimeout(message) {
-            alert(message);
+            const alertDiv = document.createElement('div');
+            alertDiv.textContent = message;
+            alertDiv.style.position = 'fixed';
+            alertDiv.style.top = '20px';
+            alertDiv.style.left = '50%';
+            alertDiv.style.transform = 'translateX(-50%)';
+            alertDiv.style.padding = '10px';
+            alertDiv.style.backgroundColor = '#4CAF50';
+            alertDiv.style.color = 'white';
+            alertDiv.style.borderRadius = '5px';
+            document.body.appendChild(alertDiv);
             setTimeout(() => {
-                window.alert = originalAlert;
+                alertDiv.remove();
             }, 5000);
         }
 
-        const originalAlert = window.alert;
         db.collection('orders').onSnapshot(snapshot => {
             snapshot.docChanges().forEach(change => {
                 if (change.type === 'added' && !addedOrders.has(change.doc.id)) {
                     const order = change.doc.data();
                     renderOrder(order, change.doc.id);
-                    window.alert = () => {}; // 임시로 alert 대체
                     showAlertWithTimeout('주문이 들어왔습니다');
                     playNotificationSound();
                     addedOrders.add(change.doc.id);
@@ -172,7 +181,6 @@
         }
 
         loadOrders();
-        setInterval(loadOrders, 5000); // 5초마다 페이지 새로 고침
     </script>
 </body>
 </html>
