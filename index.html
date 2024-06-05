@@ -184,7 +184,24 @@
             <button class="finalize-order-button" onclick="finalizeOrder()">주문 결정</button>
         </aside>
     </div>
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-analytics-compat.js"></script>
     <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyC3FKMzBKOqxKnYIJeU7TimVsZDeOZ2K64",
+            authDomain: "restaurant-order-9fd1f.firebaseapp.com",
+            projectId: "restaurant-order-9fd1f",
+            storageBucket: "restaurant-order-9fd1f.appspot.com",
+            messagingSenderId: "911452281381",
+            appId: "1:911452281381:web:14d56045f7a2b00ace3dcc",
+            measurementId: "G-VFB4GPC024"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        firebase.analytics();
+
         const menuContainer = document.getElementById('menuContainer');
         const orderList = document.getElementById('orderList');
         const totalPriceElement = document.getElementById('totalPrice');
@@ -195,10 +212,12 @@
             { name: '메뉴2', price: 12000 },
             { name: '메뉴3', price: 15000 }
         ];
-        const ws = new WebSocket('wss://restaurant-order-1.onrender.com');
+        const ws = new WebSocket('ws://localhost:8080');
+
         function formatPrice(price) {
             return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';
         }
+
         function renderMenu() {
             menuContainer.innerHTML = '';
             menu.forEach(item => {
@@ -218,6 +237,7 @@
                 menuContainer.appendChild(menuItem);
             });
         }
+
         function orderItem(name, price) {
             if (!orders[name]) {
                 orders[name] = { price: price, quantity: 0 };
@@ -229,6 +249,7 @@
             updateTotalPrice();
             saveOrders();
         }
+
         function addOrderToList(name) {
             const listItem = document.createElement('li');
             listItem.id = `order-${name}`;
@@ -243,6 +264,7 @@
             `;
             orderList.appendChild(listItem);
         }
+
         function updateQuantity(name, change) {
             const newQuantity = orders[name].quantity + change;
             if (newQuantity >= 0) {
@@ -257,6 +279,7 @@
                 saveOrders();
             }
         }
+
         function deleteItem(name) {
             totalPrice -= orders[name].price * orders[name].quantity;
             document.getElementById(`order-${name}`).remove();
@@ -264,14 +287,17 @@
             updateTotalPrice();
             saveOrders();
         }
+
         function updateOrderList() {
             for (const name in orders) {
                 document.getElementById(`quantity-${name}`).textContent = orders[name].quantity;
             }
         }
+
         function updateTotalPrice() {
             totalPriceElement.textContent = `총 금액: ${formatPrice(totalPrice)}`;
         }
+
         function editItem(event, button) {
             event.stopPropagation();
             const menuItem = button.parentElement.parentElement;
@@ -290,6 +316,7 @@
                 saveMenu();
             }
         }
+
         function deleteMenuItem(event, name) {
             event.stopPropagation();
             if (confirm('삭제하시겠습니까?')) {
@@ -299,6 +326,7 @@
                 saveMenu();
             }
         }
+
         function addMenuItem() {
             const newName = prompt('새로운 메뉴 이름을 입력하세요:');
             const newPrice = prompt('새로운 가격을 입력하세요:');
@@ -308,13 +336,16 @@
                 saveMenu();
             }
         }
+
         function saveMenu() {
             localStorage.setItem('menu', JSON.stringify(menu));
             alert('메뉴가 저장되었습니다');
         }
+
         function saveOrders() {
             localStorage.setItem('orders', JSON.stringify(orders));
         }
+
         function finalizeOrder() {
             const tableNumber = prompt('테이블 번호를 입력하세요:');
             if (tableNumber) {
@@ -334,13 +365,13 @@
                 }
             }
         }
+
         function saveOrder(tableNumber, orders, totalPrice) {
             const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
             savedOrders.push({ tableNumber, orders, totalPrice });
             localStorage.setItem('savedOrders', JSON.stringify(savedOrders));
         }
 
-        // Add this function to send the saved orders to the WebSocket server on load
         function sendSavedOrders() {
             const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
             savedOrders.forEach(order => {
@@ -348,7 +379,6 @@
             });
         }
 
-        // Call the function to send saved orders on page load
         ws.onopen = function() {
             sendSavedOrders();
         };
