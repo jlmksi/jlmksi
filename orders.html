@@ -168,7 +168,6 @@
                         batch.delete(doc.ref);
                     });
                     batch.commit().then(() => {
-                        loadOrders();
                         alert('주문이 초기화되었습니다');
                     }).catch((error) => {
                         console.error('Error resetting orders: ', error);
