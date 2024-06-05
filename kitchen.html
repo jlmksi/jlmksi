@@ -110,23 +110,20 @@
         const orderList = document.getElementById('orderList');
         const notificationSound = document.getElementById('notificationSound');
 
-        let orderNumberCounter = 1;
-
-        function renderOrder(order, docId) {
+        function renderOrder(order, docId, orderNumber) {
             const orderItem = document.createElement('div');
             orderItem.className = 'order-item';
             orderItem.id = `order-${docId}`;
-            let orderDetails = `<strong>주문 번호: ${orderNumberCounter}</strong><br>`;
+            let orderDetails = `<strong>주문 번호: ${orderNumber}</strong><br>`;
             orderDetails += `<strong>테이블 번호: ${order.tableNumber}</strong><br>`;
             for (const item in order.orders) {
                 orderDetails += `${item} ${order.orders[item].quantity}개<br>`;
             }
             orderItem.innerHTML = `
                 ${orderDetails}
-                <button onclick="completeOrder('${docId}', ${orderNumberCounter})">완료</button>
+                <button onclick="completeOrder('${docId}', ${orderNumber})">완료</button>
             `;
             orderList.appendChild(orderItem);
-            orderNumberCounter++;
         }
 
         function completeOrder(docId, orderNumber) {
@@ -176,8 +173,10 @@
 
             // 주문 순서대로 다시 렌더링
             orderList.innerHTML = '';
+            let orderNumberCounter = 1;
             addedOrders.forEach((order, docId) => {
-                renderOrder(order, docId);
+                renderOrder(order, docId, orderNumberCounter);
+                orderNumberCounter++;
             });
         });
 
@@ -188,7 +187,12 @@
                 querySnapshot.forEach(doc => {
                     const order = doc.data();
                     addedOrders.set(doc.id, order);
-                    renderOrder(order, doc.id);
+                });
+                // 주문 순서대로 다시 렌더링
+                let orderNumberCounter = 1;
+                addedOrders.forEach((order, docId) => {
+                    renderOrder(order, docId, orderNumberCounter);
+                    orderNumberCounter++;
                 });
             });
         }
