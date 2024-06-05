@@ -107,8 +107,6 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        let orderNumberCounter = 1;
-
         function formatPrice(price) {
             return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';
         }
@@ -121,6 +119,7 @@
         function loadStatistics() {
             const statisticsBody = document.getElementById('statisticsBody');
             const totalRevenueElement = document.getElementById('totalRevenue');
+            let orderNumberCounter = 1;
             db.collection('orders').orderBy('time', 'asc').onSnapshot(snapshot => {
                 statisticsBody.innerHTML = '';
                 let totalRevenue = 0;
