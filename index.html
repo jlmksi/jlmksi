@@ -365,13 +365,7 @@
         }
 
         function saveOrder(tableNumber, orders, totalPrice) {
-            const orderData = { 
-                orderNumber: Date.now(),  // 고유한 주문 번호 생성
-                tableNumber, 
-                orders, 
-                totalPrice, 
-                orderTime: new Date().toISOString() // 주문 시간 저장
-            };
+            const orderData = { tableNumber, orders, totalPrice, time: new Date() };
             db.collection('orders').add(orderData)
                 .then(() => {
                     console.log('Order saved to Firestore');
