@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>주문 현황</title>
+    <title>주문 목록</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -31,15 +31,17 @@
             text-align: center;
         }
         th {
-            background-color: #4CAF50;
+            background-color: #f4f4f4;
+        }
+        .cancel-button {
+            background-color: red;
             color: white;
+            border: none;
+            padding: 0.5em 1em;
+            cursor: pointer;
+            border-radius: 5px;
         }
-        .total {
-            font-size: 1.2em;
-            text-align: right;
-            padding: 0.5em;
-        }
-        .manage-link {
+        .home-link {
             background-color: #4CAF50;
             color: white;
             padding: 10px;
@@ -54,24 +56,21 @@
             align-items: center;
             justify-content: center;
             position: absolute;
-            right: 1em;
-            top: 1em;
+            top: 10px;
+            right: 10px;
         }
-        .cancel-button {
-            background-color: red;
-            color: white;
-            border: none;
-            padding: 0.5em;
-            cursor: pointer;
-            font-size: 1em;
-            border-radius: 5px;
+        .total-price {
+            text-align: right;
+            font-size: 2em;
+            margin-top: 1em;
+            margin-right: 1em;
         }
     </style>
 </head>
 <body>
     <header>
-        <h1>주문 현황</h1>
-        <a href="index.html" class="manage-link">🏠</a>
+        <h1>주문 목록</h1>
+        <a href="index.html" class="home-link">🏠</a>
     </header>
     <table>
         <thead>
@@ -84,12 +83,13 @@
                 <th>주문 취소</th>
             </tr>
         </thead>
-        <tbody id="ordersTable"></tbody>
+        <tbody id="ordersBody"></tbody>
     </table>
-    <div class="total" id="totalRevenue">총 매출: 0원</div>
+    <div class="total-price" id="totalRevenue">총 매출: 0원</div>
     <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore-compat.js"></script>
     <script>
+        // Firebase 설정
         const firebaseConfig = {
             apiKey: "AIzaSyCtRN3QMnHxLQEKAAn0y3q8qRvjDs8BKJA",
             authDomain: "restaurant-orders-new.firebaseapp.com",
@@ -100,9 +100,11 @@
             measurementId: "G-79XGTK3L3F"
         };
 
+        // Firebase 초기화
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
-        const ordersTable = document.getElementById('ordersTable');
+
+        const ordersBody = document.getElementById('ordersBody');
         const totalRevenueElement = document.getElementById('totalRevenue');
         let totalRevenue = 0;
 
@@ -112,25 +114,30 @@
 
         function formatDate(dateString) {
             const date = new Date(dateString);
-            return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()} ${date.getHours()}:${date.getMinutes()}`;
+            return date.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
         }
 
-        function updateTable() {
-            ordersTable.innerHTML = '';
-            totalRevenue = 0;
-            db.collection('orders').orderBy('orderNumber').get().then(snapshot => {
-                snapshot.forEach(doc => {
+        function loadOrders() {
+            db.collection('orders').onSnapshot(querySnapshot => {
+                ordersBody.innerHTML = '';
+                totalRevenue = 0;
+                querySnapshot.forEach((doc) => {
                     const order = doc.data();
+                    const orderTime = formatDate(order.time.toDate());
+                    let orderDetails = '';
+                    for (const item in order.orders) {
+                        orderDetails += `${item} ${order.orders[item].quantity}개<br>`;
+                    }
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td>${order.orderNumber}</td>
                         <td>${order.tableNumber}</td>
-                        <td>${formatDate(order.time.toDate())}</td>
-                        <td>${Object.entries(order.orders).map(([name, { quantity }]) => `${name} ${quantity}개`).join(', ')}</td>
+                        <td>${orderTime}</td>
+                        <td>${orderDetails}</td>
                         <td>${formatPrice(order.totalPrice)}</td>
-                        <td><button class="cancel-button" onclick="cancelOrder('${order.id}')">취소</button></td>
+                        <td><button class="cancel-button" onclick="cancelOrder('${doc.id}')">취소</button></td>
                     `;
-                    ordersTable.appendChild(row);
+                    ordersBody.appendChild(row);
                     totalRevenue += order.totalPrice;
                 });
                 totalRevenueElement.textContent = `총 매출: ${formatPrice(totalRevenue)}`;
@@ -138,17 +145,17 @@
         }
 
         function cancelOrder(orderId) {
-            if (confirm('주문을 취소하시겠습니까?')) {
+            if (confirm('이 주문을 취소하시겠습니까?')) {
                 db.collection('orders').doc(orderId).delete().then(() => {
-                    alert('주문이 취소되었습니다.');
-                    updateTable();
-                }).catch(error => {
-                    console.error('Error deleting document: ', error);
+                    console.log('Order deleted from Firestore');
+                    alert('주문이 취소되었습니다');
+                }).catch((error) => {
+                    console.error('Error deleting order: ', error);
                 });
             }
         }
 
-        updateTable();
+        loadOrders();
     </script>
 </body>
 </html>
