@@ -68,7 +68,24 @@
     </header>
     <div class="order-list" id="orderList"></div>
     <audio id="notificationSound" src="notification.mp3"></audio>
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-firestore-compat.js"></script>
     <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyC3FKMzBKOqxKnYIJeU7TimVsZDeOZ2K64",
+            authDomain: "restaurant-order-9fd1f.firebaseapp.com",
+            projectId: "restaurant-order-9fd1f",
+            storageBucket: "restaurant-order-9fd1f.appspot.com",
+            messagingSenderId: "911452281381",
+            appId: "1:911452281381:web:14d56045f7a2b00ace3dcc",
+            measurementId: "G-VFB4GPC024"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
         const orderList = document.getElementById('orderList');
         const notificationSound = document.getElementById('notificationSound');
 
@@ -93,23 +110,23 @@
             }
         }
 
-        const ws = new WebSocket('ws://localhost:8080');
-
-        ws.onmessage = function(event) {
-            const order = JSON.parse(event.data);
-            const savedOrders = JSON.parse(localStorage.getItem('kitchenOrders')) || [];
-            savedOrders.push(order);
-            localStorage.setItem('kitchenOrders', JSON.stringify(savedOrders));
-            renderOrder(order, savedOrders.length - 1);
-            notificationSound.play();
-            alert('주문이 들어왔습니다');
-        };
+        db.collection('orders').onSnapshot(snapshot => {
+            snapshot.docChanges().forEach(change => {
+                if (change.type === 'added') {
+                    const order = change.doc.data();
+                    renderOrder(order, orderList.children.length);
+                    notificationSound.play();
+                    alert('주문이 들어왔습니다');
+                }
+            });
+        });
 
         function loadOrders() {
-            const savedOrders = JSON.parse(localStorage.getItem('kitchenOrders')) || [];
-            orderList.innerHTML = '';
-            savedOrders.forEach((order, index) => {
-                renderOrder(order, index);
+            db.collection('orders').get().then(querySnapshot => {
+                querySnapshot.forEach(doc => {
+                    const order = doc.data();
+                    renderOrder(order, orderList.children.length);
+                });
             });
         }
 
