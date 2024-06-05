@@ -67,6 +67,19 @@
             align-self: flex-end;
             font-size: 1em; /* 버튼 글씨 크기 */
         }
+        .alert {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px;
+            background-color: #4CAF50;
+            color: white;
+            font-size: 2em;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 1000;
+        }
     </style>
 </head>
 <body>
@@ -75,7 +88,7 @@
         <a href="index.html" class="home-link">🏠</a>
     </header>
     <div class="order-list" id="orderList"></div>
-    <audio id="notificationSound" src="https://github.com/jlmksi/restaurant-order/blob/b10db0b4096b197e211b7fc63f66e04f00041661/assets/notification.mp3?raw=true"></audio>
+    <audio id="notificationSound" src="https://github.com/jlmksi/restaurant-order/blob/b10db0b4096b197e211b7fc63f66e04f00041661/assets/notification.mp3?raw=true" preload="auto"></audio>
     <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore-compat.js"></script>
     <script>
@@ -97,11 +110,11 @@
         const orderList = document.getElementById('orderList');
         const notificationSound = document.getElementById('notificationSound');
 
-        function renderOrder(order, docId, orderNumber) {
+        function renderOrder(order, docId) {
             const orderItem = document.createElement('div');
             orderItem.className = 'order-item';
             orderItem.id = `order-${docId}`;
-            let orderDetails = `<strong>주문 번호: ${orderNumber}</strong><br>`;
+            let orderDetails = `<strong>주문 번호: ${order.orderNumber}</strong><br>`;
             orderDetails += `<strong>테이블 번호: ${order.tableNumber}</strong><br>`;
             for (const item in order.orders) {
                 orderDetails += `${item} ${order.orders[item].quantity}개<br>`;
@@ -136,15 +149,8 @@
 
         function showAlertWithTimeout(message) {
             const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert';
             alertDiv.textContent = message;
-            alertDiv.style.position = 'fixed';
-            alertDiv.style.top = '20px';
-            alertDiv.style.left = '50%';
-            alertDiv.style.transform = 'translateX(-50%)';
-            alertDiv.style.padding = '10px';
-            alertDiv.style.backgroundColor = '#4CAF50';
-            alertDiv.style.color = 'white';
-            alertDiv.style.borderRadius = '5px';
             document.body.appendChild(alertDiv);
             setTimeout(() => {
                 alertDiv.remove();
@@ -167,9 +173,8 @@
 
             // 주문 순서대로 다시 렌더링
             orderList.innerHTML = '';
-            let orderNumber = 1;
             addedOrders.forEach((order, docId) => {
-                renderOrder(order, docId, orderNumber++);
+                renderOrder(order, docId);
             });
         });
 
@@ -177,11 +182,10 @@
             db.collection('orders').get().then(querySnapshot => {
                 orderList.innerHTML = ''; // Clear existing orders
                 addedOrders.clear(); // Clear the set
-                let orderNumber = 1;
                 querySnapshot.forEach(doc => {
                     const order = doc.data();
                     addedOrders.set(doc.id, order);
-                    renderOrder(order, doc.id, orderNumber++);
+                    renderOrder(order, doc.id);
                 });
             });
         }
