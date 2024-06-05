@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>주방 주문</title>
-    <link rel="icon" href="favicon.ico">
+    <title>주방 화면</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -15,80 +14,69 @@
         header {
             background-color: #4CAF50;
             color: white;
+            text-align: center;
             padding: 1em;
-            text-align: center;
-            position: relative;
+            border-radius: 0 0 10px 10px;
         }
-        .home-link {
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px;
-            border-radius: 10px;
-            text-align: center;
-            width: 50px;
-            height: 50px;
-            line-height: 30px;
-            text-decoration: none;
-            font-size: 1.5em;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: absolute;
-            top: 10px;
-            right: 10px;
-        }
-        .order-list {
-            margin: 1em;
+        .container {
             display: flex;
             flex-wrap: wrap;
-            justify-content: flex-start; /* 왼쪽 정렬 */
+            justify-content: center;
+            padding: 1em;
         }
-        .order-item {
+        .order {
             background-color: white;
             border: 1px solid #ddd;
             border-radius: 10px;
+            margin: 0.5em;
             padding: 1em;
-            margin: 1em;
+            width: 200px;
+            text-align: center;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            width: 200px; /* 박스 크기 */
-            height: 200px; /* 박스 크기 */
-            font-size: 1.2em; /* 글씨 크기 */
+            position: relative;
         }
-        .order-item button {
+        .order h3 {
+            margin: 0.5em 0;
+            font-size: 1.2em;
+        }
+        .order p {
+            margin: 0.5em 0;
+            color: black;
+            font-size: 1em;
+        }
+        .complete-button {
             background-color: #4CAF50;
             color: white;
             border: none;
-            padding: 0.3em 0.5em;
+            padding: 0.5em 1em;
             cursor: pointer;
             border-radius: 5px;
-            align-self: flex-end;
-            font-size: 1em; /* 버튼 글씨 크기 */
+            font-size: 1em;
+            margin-top: 1em;
         }
         .alert {
+            background-color: #ff9800;
+            color: white;
+            padding: 1em;
+            text-align: center;
             position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            padding: 20px;
-            background-color: #4CAF50;
-            color: white;
-            font-size: 2em;
-            border-radius: 10px;
-            text-align: center;
             z-index: 1000;
+            border-radius: 10px;
+            font-size: 1.5em;
+            display: none;
         }
     </style>
 </head>
 <body>
     <header>
-        <h1>주방 주문</h1>
-        <a href="index.html" class="home-link">🏠</a>
+        <h1>주방 화면</h1>
     </header>
-    <div class="order-list" id="orderList"></div>
-    <audio id="notificationSound" src="https://github.com/jlmksi/restaurant-order/blob/b10db0b4096b197e211b7fc63f66e04f00041661/assets/notification.mp3?raw=true" preload="auto"></audio>
+    <div class="container" id="orderList"></div>
+    <audio id="notificationSound" src="https://jlmksi.github.io/restaurant-order/assets/notification.mp3" preload="auto"></audio>
+    <div class="alert" id="alertMessage"></div>
     <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore-compat.js"></script>
     <script>
@@ -109,87 +97,65 @@
 
         const orderList = document.getElementById('orderList');
         const notificationSound = document.getElementById('notificationSound');
+        const alertMessage = document.getElementById('alertMessage');
+        let lastOrderNumber = 0;
 
         function renderOrder(order, docId) {
-            const orderItem = document.createElement('div');
-            orderItem.className = 'order-item';
-            orderItem.id = `order-${docId}`;
-            let orderDetails = `<strong>주문 번호: ${order.orderNumber}</strong><br>`;
-            orderDetails += `<strong>테이블 번호: ${order.tableNumber}</strong><br>`;
-            for (const item in order.orders) {
-                orderDetails += `${item} ${order.orders[item].quantity}개<br>`;
-            }
-            orderItem.innerHTML = `
-                ${orderDetails}
-                <button onclick="completeOrder('${docId}', ${order.orderNumber})">완료</button>
+            const orderDiv = document.createElement('div');
+            orderDiv.className = 'order';
+            orderDiv.id = `order-${docId}`;
+            orderDiv.innerHTML = `
+                <h3>주문 번호: ${order.orderNumber}</h3>
+                <p>테이블 번호: ${order.tableNumber}</p>
+                <p>주문 시간: ${new Date(order.time.toDate()).toLocaleString('ko-KR')}</p>
+                <div>
+                    ${Object.entries(order.orders).map(([name, details]) => `<p>${name}: ${details.quantity}개</p>`).join('')}
+                </div>
+                <button class="complete-button" onclick="completeOrder('${docId}')">완료</button>
             `;
-            orderList.appendChild(orderItem);
+            orderList.appendChild(orderDiv);
         }
-
-        function completeOrder(docId, orderNumber) {
-            if (confirm(`주문 번호 ${orderNumber}을(를) 완료하시겠습니까?`)) {
-                const orderItem = document.getElementById(`order-${docId}`);
-                if (orderItem) {
-                    orderItem.remove();
-                }
-            }
-        }
-
-        let addedOrders = new Map();
 
         function playNotificationSound() {
+            notificationSound.currentTime = 0;
             notificationSound.play().catch(error => {
-                console.error('Audio play failed: ', error);
+                console.log('Audio play failed:', error);
             });
         }
 
-        function showAlertWithTimeout(message) {
-            const alertDiv = document.createElement('div');
-            alertDiv.className = 'alert';
-            alertDiv.textContent = message;
-            document.body.appendChild(alertDiv);
+        function showAlert(message) {
+            alertMessage.textContent = message;
+            alertMessage.style.display = 'block';
             setTimeout(() => {
-                alertDiv.remove();
+                alertMessage.style.display = 'none';
             }, 5000);
         }
 
-        db.collection('orders').onSnapshot(snapshot => {
-            snapshot.docChanges().forEach(change => {
-                const docId = change.doc.id;
-                if (change.type === 'added' && !addedOrders.has(docId)) {
-                    const order = change.doc.data();
-                    addedOrders.set(docId, order);
-                    showAlertWithTimeout('주문이 들어왔습니다');
-                    playNotificationSound();
-                }
-                if (change.type === 'removed') {
-                    addedOrders.delete(docId);
-                }
-            });
-
-            // 주문 순서대로 다시 렌더링
-            orderList.innerHTML = '';
-            addedOrders.forEach((order, docId) => {
-                renderOrder(order, docId);
-            });
-        });
-
-        function loadOrders() {
-            db.collection('orders').get().then(querySnapshot => {
-                orderList.innerHTML = ''; // Clear existing orders
-                addedOrders.clear(); // Clear the set
-                querySnapshot.forEach(doc => {
-                    const order = doc.data();
-                    addedOrders.set(doc.id, order);
-                });
-                // 주문 순서대로 다시 렌더링
-                addedOrders.forEach((order, docId) => {
-                    renderOrder(order, docId);
-                });
+        function completeOrder(docId) {
+            db.collection('orders').doc(docId).delete().then(() => {
+                document.getElementById(`order-${docId}`).remove();
+                console.log('Order completed');
+            }).catch((error) => {
+                console.error('Error completing order: ', error);
             });
         }
 
-        loadOrders();
+        db.collection('orders').orderBy('orderNumber').onSnapshot((snapshot) => {
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === 'added') {
+                    const order = change.doc.data();
+                    if (order.orderNumber > lastOrderNumber) {
+                        renderOrder(order, change.doc.id);
+                        playNotificationSound();
+                        showAlert('주문이 들어왔습니다');
+                        lastOrderNumber = order.orderNumber;
+                    }
+                } else if (change.type === 'removed') {
+                    const docId = change.doc.id;
+                    document.getElementById(`order-${docId}`).remove();
+                }
+            });
+        });
     </script>
 </body>
 </html>
