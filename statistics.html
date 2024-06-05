@@ -87,13 +87,12 @@
                 <th>총 금액</th>
             </tr>
         </thead>
-        <tbody id="statisticsBody"></tbody>
+        <tbody id="ordersBody"></tbody>
     </table>
     <div class="total-price" id="totalRevenue">총 매출: 0원</div>
     <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore-compat.js"></script>
     <script>
-        // Firebase 설정
         const firebaseConfig = {
             apiKey: "AIzaSyCtRN3QMnHxLQEKAAn0y3q8qRvjDs8BKJA",
             authDomain: "restaurant-orders-new.firebaseapp.com",
@@ -104,63 +103,61 @@
             measurementId: "G-79XGTK3L3F"
         };
 
-        // Firebase 초기화
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
-
-        const statisticsBody = document.getElementById('statisticsBody');
-        const totalRevenueElement = document.getElementById('totalRevenue');
 
         function formatPrice(price) {
             return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';
         }
 
-        function formatDate(dateString) {
-            const date = new Date(dateString);
-            return date.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+        function formatDate(date) {
+            const options = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+            return new Intl.DateTimeFormat('ko-KR', options).format(date.toDate());
         }
 
-        function loadStatistics() {
-            statisticsBody.innerHTML = '';
+        function loadOrders() {
+            const ordersBody = document.getElementById('ordersBody');
+            const totalRevenueElement = document.getElementById('totalRevenue');
             let totalRevenue = 0;
-            db.collection('orders').get().then(querySnapshot => {
-                querySnapshot.forEach(doc => {
+
+            db.collection('orders').orderBy('time', 'asc').get().then((querySnapshot) => {
+                ordersBody.innerHTML = '';
+                querySnapshot.forEach((doc, index) => {
                     const order = doc.data();
-                    const orderTime = formatDate(order.time || new Date());
+                    const orderTime = formatDate(order.time);
                     let orderDetails = '';
                     for (const item in order.orders) {
                         orderDetails += `${item} ${order.orders[item].quantity}개<br>`;
                     }
                     const row = document.createElement('tr');
                     row.innerHTML = `
-                        <td>${order.orderNumber}</td>
+                        <td>${index + 1}</td>
                         <td>${order.tableNumber}</td>
                         <td>${orderTime}</td>
                         <td>${orderDetails}</td>
                         <td>${formatPrice(order.totalPrice)}</td>
                     `;
-                    statisticsBody.appendChild(row);
+                    ordersBody.appendChild(row);
                     totalRevenue += order.totalPrice;
                 });
+
                 totalRevenueElement.textContent = `총 매출: ${formatPrice(totalRevenue)}`;
             });
         }
 
         function resetOrders() {
             if (confirm('모든 주문을 초기화하시겠습니까?')) {
-                db.collection('orders').get().then(querySnapshot => {
-                    querySnapshot.forEach(doc => {
+                db.collection('orders').get().then((querySnapshot) => {
+                    querySnapshot.forEach((doc) => {
                         db.collection('orders').doc(doc.id).delete();
                     });
-                    loadStatistics();
+                    loadOrders();
                     alert('주문이 초기화되었습니다');
-                }).catch((error) => {
-                    console.error('Error removing documents: ', error);
                 });
             }
         }
 
-        loadStatistics();
+        loadOrders();
     </script>
 </body>
 </html>
