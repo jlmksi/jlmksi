@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>주방 화면</title>
+    <title>주방 주문</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -14,85 +14,70 @@
         header {
             background-color: #4CAF50;
             color: white;
-            text-align: center;
             padding: 1em;
-            border-radius: 0 0 10px 10px;
+            text-align: center;
+            position: relative;
         }
-        .container {
+        .order-container {
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
             padding: 1em;
         }
-        .order {
+        .order-card {
             background-color: white;
             border: 1px solid #ddd;
             border-radius: 10px;
             margin: 0.5em;
             padding: 1em;
-            width: 200px;
-            text-align: center;
+            width: calc(20% - 1em);
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
             position: relative;
         }
-        .order h3 {
+        .order-card h2 {
+            font-size: 1.5em;
+            margin-bottom: 0.5em;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 0.5em;
+        }
+        .order-card p {
             margin: 0.5em 0;
             font-size: 1.2em;
-        }
-        .order p {
-            margin: 0.5em 0;
-            font-size: 1em;
-        }
-        .order .order-time {
-            font-size: 0.8em;
-        }
-        .order .table-number, .order .menu {
-            font-size: 1.5em; /* 폰트 크기 증가 */
-            color: green;
+            color: #4CAF50;
             font-weight: bold;
         }
-        .order div {
-            border-top: 1px solid #ddd;
-            padding-top: 0.5em;
+        .order-card .order-time {
+            font-size: 1em;
+            color: #555;
         }
-        .complete-button {
+        .order-card button {
             background-color: #4CAF50;
             color: white;
             border: none;
-            padding: 0.5em 1em;
+            padding: 0.5em;
             cursor: pointer;
-            border-radius: 5px;
             font-size: 1em;
-            margin-top: 1em;
+            border-radius: 5px;
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
         }
-        .alert {
-            background-color: #ff9800;
-            color: white;
-            padding: 1em;
-            text-align: center;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 1000;
-            border-radius: 10px;
-            font-size: 2em; /* 글씨 크기 증가 */
-            display: none;
+        .line {
+            border-bottom: 1px solid #ddd;
+            margin: 10px 0;
         }
     </style>
 </head>
 <body>
     <header>
-        <h1>주방 화면</h1>
+        <h1>주방 주문</h1>
+        <a href="index.html" class="manage-link">🏠</a>
     </header>
-    <div class="container" id="orderList"></div>
+    <div class="order-container" id="orderContainer"></div>
     <audio id="notificationSound" src="assets/notification.mp3" preload="auto"></audio>
-    <div class="alert" id="alertMessage"></div>
-
     <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore-compat.js"></script>
     <script>
-        // Firebase 설정
         const firebaseConfig = {
             apiKey: "AIzaSyCtRN3QMnHxLQEKAAn0y3q8qRvjDs8BKJA",
             authDomain: "restaurant-orders-new.firebaseapp.com",
@@ -103,69 +88,66 @@
             measurementId: "G-79XGTK3L3F"
         };
 
-        // Firebase 초기화
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
-
-        const orderListElement = document.getElementById('orderList');
-        const alertMessageElement = document.getElementById('alertMessage');
+        const orderContainer = document.getElementById('orderContainer');
         const notificationSound = document.getElementById('notificationSound');
 
-        function playNotificationSound() {
-            notificationSound.play().catch(error => {
-                console.error('Audio play failed:', error);
+        function formatPrice(price) {
+            return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()} ${date.getHours()}:${date.getMinutes()}`;
+        }
+
+        function createOrderCard(order) {
+            const card = document.createElement('div');
+            card.className = 'order-card';
+            card.innerHTML = `
+                <h2>주문 번호: ${order.orderNumber}</h2>
+                <p class="order-time">주문 시간: ${formatDate(order.time)}</p>
+                <div class="line"></div>
+                <p>테이블 번호: ${order.tableNumber}</p>
+                ${Object.entries(order.orders).map(([name, { quantity }]) => `<p>${name} ${quantity}개</p>`).join('')}
+                <button onclick="completeOrder('${order.id}', this)">완료</button>
+            `;
+            orderContainer.appendChild(card);
+        }
+
+        function loadOrders() {
+            db.collection('orders').orderBy('orderNumber').onSnapshot(snapshot => {
+                orderContainer.innerHTML = '';
+                snapshot.forEach(doc => {
+                    const order = doc.data();
+                    order.id = doc.id;
+                    createOrderCard(order);
+                });
             });
         }
 
-        function showAlert(message) {
-            alertMessageElement.textContent = message;
-            alertMessageElement.style.display = 'block';
-            setTimeout(() => {
-                alertMessageElement.style.display = 'none';
-            }, 5000);
-        }
-
-        function renderOrder(order) {
-            const orderElement = document.createElement('div');
-            orderElement.className = 'order';
-            orderElement.innerHTML = `
-                <h3>주문 번호: ${order.orderNumber}</h3>
-                <p class="order-time">${new Date(order.time.seconds * 1000).toLocaleString()}</p>
-                <p class="table-number">테이블 번호: ${order.tableNumber}</p>
-                <p class="menu">${Object.keys(order.orders).map(key => `${key} ${order.orders[key].quantity}개`).join('<br>')}</p>
-                <button class="complete-button" onclick="completeOrder('${order.id}')">완료</button>
-            `;
-            orderListElement.appendChild(orderElement);
-        }
-
-        function completeOrder(orderId) {
-            if (confirm('이 주문을 완료하시겠습니까?')) {
+        function completeOrder(orderId, button) {
+            if (confirm('주문을 완료하시겠습니까?')) {
                 db.collection('orders').doc(orderId).delete().then(() => {
-                    document.getElementById(orderId).remove();
-                    showAlert('주문이 완료되었습니다.');
+                    alert('주문이 완료되었습니다.');
                 }).catch(error => {
-                    console.error('Error removing document: ', error);
+                    console.error('Error deleting document: ', error);
                 });
             }
         }
 
-        function loadOrders() {
-            let initialLoad = true;
-            db.collection('orders').orderBy('orderNumber').onSnapshot((snapshot) => {
-                orderListElement.innerHTML = '';
-                snapshot.forEach((doc) => {
-                    const order = { id: doc.id, ...doc.data() };
-                    renderOrder(order);
-                });
-                if (initialLoad) {
-                    initialLoad = false;
-                } else {
-                    playNotificationSound();
+        loadOrders();
+
+        db.collection('orders').onSnapshot(snapshot => {
+            snapshot.docChanges().forEach(change => {
+                if (change.type === 'added') {
+                    notificationSound.play().catch(error => {
+                        console.log('Audio play failed:', error);
+                    });
                 }
             });
-        }
-
-        loadOrders();
+        });
     </script>
 </body>
 </html>
