@@ -33,13 +33,17 @@
         th {
             background-color: #f4f4f4;
         }
-        .cancel-button {
-            background-color: red;
-            color: white;
-            border: none;
+        .reset-button {
+            background-color: white;
+            color: red;
+            border: 1px solid red;
             padding: 0.5em 1em;
             cursor: pointer;
             border-radius: 5px;
+            margin-top: 10px;
+            position: absolute;
+            top: 60px;
+            right: 10px;
         }
         .home-link {
             background-color: #4CAF50;
@@ -71,6 +75,7 @@
     <header>
         <h1>주문 통계</h1>
         <a href="index.html" class="home-link">🏠</a>
+        <button class="reset-button" onclick="resetOrders()">주문 초기화</button>
     </header>
     <table>
         <thead>
@@ -80,7 +85,6 @@
                 <th>주문 시간</th>
                 <th>주문 내용</th>
                 <th>총 금액</th>
-                <th>주문 취소</th>
             </tr>
         </thead>
         <tbody id="statisticsBody"></tbody>
@@ -106,7 +110,6 @@
 
         const statisticsBody = document.getElementById('statisticsBody');
         const totalRevenueElement = document.getElementById('totalRevenue');
-        let totalRevenue = 0;
 
         function formatPrice(price) {
             return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';
@@ -118,24 +121,23 @@
         }
 
         function loadStatistics() {
+            statisticsBody.innerHTML = '';
+            let totalRevenue = 0;
             db.collection('orders').get().then(querySnapshot => {
-                statisticsBody.innerHTML = '';
-                totalRevenue = 0;
-                querySnapshot.forEach((doc, index) => {
+                querySnapshot.forEach(doc => {
                     const order = doc.data();
-                    const row = document.createElement('tr');
-                    const orderTime = formatDate(order.time.toDate());
+                    const orderTime = formatDate(order.time || new Date());
                     let orderDetails = '';
                     for (const item in order.orders) {
                         orderDetails += `${item} ${order.orders[item].quantity}개<br>`;
                     }
+                    const row = document.createElement('tr');
                     row.innerHTML = `
-                        <td>${index + 1}</td>
+                        <td>${order.orderNumber}</td>
                         <td>${order.tableNumber}</td>
                         <td>${orderTime}</td>
                         <td>${orderDetails}</td>
                         <td>${formatPrice(order.totalPrice)}</td>
-                        <td><button class="cancel-button" onclick="cancelOrder('${doc.id}', ${index})">취소</button></td>
                     `;
                     statisticsBody.appendChild(row);
                     totalRevenue += order.totalPrice;
@@ -144,15 +146,16 @@
             });
         }
 
-        function cancelOrder(orderId, rowIndex) {
-            if (confirm('이 주문을 취소하시겠습니까?')) {
-                db.collection('orders').doc(orderId).delete().then(() => {
-                    console.log('Order deleted from Firestore');
-                    document.getElementById('statisticsBody').deleteRow(rowIndex);
-                    alert('주문이 취소되었습니다');
-                    loadStatistics(); // Reload statistics to update the total revenue
+        function resetOrders() {
+            if (confirm('모든 주문을 초기화하시겠습니까?')) {
+                db.collection('orders').get().then(querySnapshot => {
+                    querySnapshot.forEach(doc => {
+                        db.collection('orders').doc(doc.id).delete();
+                    });
+                    loadStatistics();
+                    alert('주문이 초기화되었습니다');
                 }).catch((error) => {
-                    console.error('Error deleting order: ', error);
+                    console.error('Error removing documents: ', error);
                 });
             }
         }
