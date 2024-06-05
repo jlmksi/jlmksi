@@ -110,32 +110,28 @@
         const orderList = document.getElementById('orderList');
         const notificationSound = document.getElementById('notificationSound');
 
-        function renderOrder(order, docId, orderNumber) {
+        function renderOrder(order, docId) {
             const orderItem = document.createElement('div');
             orderItem.className = 'order-item';
             orderItem.id = `order-${docId}`;
-            let orderDetails = `<strong>주문 번호: ${orderNumber}</strong><br>`;
+            let orderDetails = `<strong>주문 번호: ${order.orderNumber}</strong><br>`;
             orderDetails += `<strong>테이블 번호: ${order.tableNumber}</strong><br>`;
             for (const item in order.orders) {
                 orderDetails += `${item} ${order.orders[item].quantity}개<br>`;
             }
             orderItem.innerHTML = `
                 ${orderDetails}
-                <button onclick="completeOrder('${docId}', ${orderNumber})">완료</button>
+                <button onclick="completeOrder('${docId}', ${order.orderNumber})">완료</button>
             `;
             orderList.appendChild(orderItem);
         }
 
         function completeOrder(docId, orderNumber) {
             if (confirm(`주문 번호 ${orderNumber}을(를) 완료하시겠습니까?`)) {
-                db.collection('orders').doc(docId).delete().then(() => {
-                    const orderItem = document.getElementById(`order-${docId}`);
-                    if (orderItem) {
-                        orderItem.remove();
-                    }
-                }).catch((error) => {
-                    console.error('Error removing document: ', error);
-                });
+                const orderItem = document.getElementById(`order-${docId}`);
+                if (orderItem) {
+                    orderItem.remove();
+                }
             }
         }
 
@@ -173,10 +169,8 @@
 
             // 주문 순서대로 다시 렌더링
             orderList.innerHTML = '';
-            let orderNumberCounter = 1;
             addedOrders.forEach((order, docId) => {
-                renderOrder(order, docId, orderNumberCounter);
-                orderNumberCounter++;
+                renderOrder(order, docId);
             });
         });
 
@@ -189,10 +183,8 @@
                     addedOrders.set(doc.id, order);
                 });
                 // 주문 순서대로 다시 렌더링
-                let orderNumberCounter = 1;
                 addedOrders.forEach((order, docId) => {
-                    renderOrder(order, docId, orderNumberCounter);
-                    orderNumberCounter++;
+                    renderOrder(order, docId);
                 });
             });
         }
