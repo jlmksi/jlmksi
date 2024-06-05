@@ -1,16 +1,14 @@
-<script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-firestore-compat.js"></script>
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyC3FKMzBKOqxKnYIJeU7TimVsZDeOZ2K64",
-    authDomain: "restaurant-order-9fd1f.firebaseapp.com",
-    projectId: "restaurant-order-9fd1f",
-    storageBucket: "restaurant-order-9fd1f.appspot.com",
-    messagingSenderId: "911452281381",
-    appId: "1:911452281381:web:14d56045f7a2b00ace3dcc",
-    measurementId: "G-VFB4GPC024"
-  };
+// Firebase 설정
+const firebaseConfig = {
+    apiKey: "AIzaSyCtRN3QMnHxLQEKAAn0y3q8qRvjDs8BKJA",
+    authDomain: "restaurant-orders-new.firebaseapp.com",
+    projectId: "restaurant-orders-new",
+    storageBucket: "restaurant-orders-new.appspot.com",
+    messagingSenderId: "500015809437",
+    appId: "1:500015809437:web:49d6b18dbea33114d06574",
+    measurementId: "G-79XGTK3L3F"
+};
 
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
-</script>
+// Firebase 초기화
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
