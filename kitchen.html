@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>주방 주문</title>
+    <link rel="icon" href="favicon.ico">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -14,72 +15,84 @@
         header {
             background-color: #4CAF50;
             color: white;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.3em 2em;
-            border-radius: 0 0 10px 10px;
+            padding: 1em;
+            text-align: center;
             position: relative;
         }
-        .icon-container {
+        .home-link {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px;
+            border-radius: 10px;
+            text-align: center;
+            width: 50px;
+            height: 50px;
+            line-height: 30px;
+            text-decoration: none;
+            font-size: 1.5em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             position: absolute;
             top: 10px;
             right: 10px;
-            display: flex;
-            gap: 1px;
         }
-        .container {
+        .order-list {
+            margin: 1em;
             display: flex;
-            width: 100%;
             flex-wrap: wrap;
-            justify-content: center;
-            padding: 1em;
+            justify-content: flex-start; /* 왼쪽 정렬 */
         }
-        .order-box {
+        .order-item {
             background-color: white;
             border: 1px solid #ddd;
             border-radius: 10px;
-            margin: 0.5em;
             padding: 1em;
-            width: 200px;
+            margin: 1em;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            width: 200px; /* 박스 크기 */
+            height: 200px; /* 박스 크기 */
+            font-size: 1.2em; /* 글씨 크기 */
         }
-        .order-box h3 {
-            margin: 0;
-            font-size: 1.2em;
-        }
-        .order-box p {
-            margin: 0.5em 0;
-            color: #333;
-            font-size: 1em;
-        }
-        .complete-button {
+        .order-item button {
             background-color: #4CAF50;
             color: white;
             border: none;
-            padding: 0.5em 1em;
+            padding: 0.3em 0.5em;
             cursor: pointer;
-            font-size: 1em;
             border-radius: 5px;
-            position: absolute;
-            bottom: 1em;
-            right: 1em;
+            align-self: flex-end;
+            font-size: 1em; /* 버튼 글씨 크기 */
+        }
+        .alert {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px;
+            background-color: #4CAF50;
+            color: white;
+            font-size: 2em;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 1000;
         }
     </style>
 </head>
 <body>
-    <header style="height: 120px;">
-        <h1 style="white-space: nowrap;">세광교회 바자회 키오스크</h1>
-        <div class="icon-container">
-            <a href="index.html" class="manage-link">🏠</a>
-        </div>
+    <header>
+        <h1>주방 주문</h1>
+        <a href="index.html" class="home-link">🏠</a>
     </header>
-    <div class="container" id="orderContainer"></div>
-
+    <div class="order-list" id="orderList"></div>
+    <audio id="notificationSound" src="https://github.com/jlmksi/restaurant-order/blob/b10db0b4096b197e211b7fc63f66e04f00041661/assets/notification.mp3?raw=true" preload="auto"></audio>
     <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore-compat.js"></script>
     <script>
+        // Firebase 설정
         const firebaseConfig = {
             apiKey: "AIzaSyCtRN3QMnHxLQEKAAn0y3q8qRvjDs8BKJA",
             authDomain: "restaurant-orders-new.firebaseapp.com",
@@ -90,66 +103,97 @@
             measurementId: "G-79XGTK3L3F"
         };
 
+        // Firebase 초기화
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
-        const orderContainer = document.getElementById('orderContainer');
 
-        db.collection('orders').orderBy('time', 'asc').onSnapshot(snapshot => {
-            orderContainer.innerHTML = '';
-            snapshot.forEach(doc => {
-                const order = doc.data();
-                const orderBox = document.createElement('div');
-                orderBox.className = 'order-box';
-                orderBox.innerHTML = `
-                    <h3>주문 번호: ${doc.id}</h3>
-                    <p>테이블 번호: ${order.tableNumber}</p>
-                    <p>${Object.keys(order.orders).map(item => `${item}: ${order.orders[item].quantity}개`).join('<br>')}</p>
-                    <p>주문 시간: ${new Date(order.time.seconds * 1000).toLocaleString()}</p>
-                    <button class="complete-button" onclick="completeOrder('${doc.id}')">완료</button>
-                `;
-                orderContainer.appendChild(orderBox);
+        const orderList = document.getElementById('orderList');
+        const notificationSound = document.getElementById('notificationSound');
+
+        let orderNumberCounter = 1;
+
+        function renderOrder(order, docId) {
+            const orderItem = document.createElement('div');
+            orderItem.className = 'order-item';
+            orderItem.id = `order-${docId}`;
+            let orderDetails = `<strong>주문 번호: ${orderNumberCounter}</strong><br>`;
+            orderDetails += `<strong>테이블 번호: ${order.tableNumber}</strong><br>`;
+            for (const item in order.orders) {
+                orderDetails += `${item} ${order.orders[item].quantity}개<br>`;
+            }
+            orderItem.innerHTML = `
+                ${orderDetails}
+                <button onclick="completeOrder('${docId}', ${orderNumberCounter})">완료</button>
+            `;
+            orderList.appendChild(orderItem);
+            orderNumberCounter++;
+        }
+
+        function completeOrder(docId, orderNumber) {
+            if (confirm(`주문 번호 ${orderNumber}을(를) 완료하시겠습니까?`)) {
+                db.collection('orders').doc(docId).delete().then(() => {
+                    const orderItem = document.getElementById(`order-${docId}`);
+                    if (orderItem) {
+                        orderItem.remove();
+                    }
+                }).catch((error) => {
+                    console.error('Error removing document: ', error);
+                });
+            }
+        }
+
+        let addedOrders = new Map();
+
+        function playNotificationSound() {
+            notificationSound.play().catch(error => {
+                console.error('Audio play failed: ', error);
+            });
+        }
+
+        function showAlertWithTimeout(message) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert';
+            alertDiv.textContent = message;
+            document.body.appendChild(alertDiv);
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 5000);
+        }
+
+        db.collection('orders').onSnapshot(snapshot => {
+            snapshot.docChanges().forEach(change => {
+                const docId = change.doc.id;
+                if (change.type === 'added' && !addedOrders.has(docId)) {
+                    const order = change.doc.data();
+                    addedOrders.set(docId, order);
+                    showAlertWithTimeout('주문이 들어왔습니다');
+                    playNotificationSound();
+                }
+                if (change.type === 'removed') {
+                    addedOrders.delete(docId);
+                }
+            });
+
+            // 주문 순서대로 다시 렌더링
+            orderList.innerHTML = '';
+            addedOrders.forEach((order, docId) => {
+                renderOrder(order, docId);
             });
         });
 
-        function completeOrder(id) {
-            db.collection('orders').doc(id).delete()
-                .then(() => {
-                    alert('주문이 완료되었습니다');
-                })
-                .catch(error => {
-                    console.error('Error completing order: ', error);
+        function loadOrders() {
+            db.collection('orders').get().then(querySnapshot => {
+                orderList.innerHTML = ''; // Clear existing orders
+                addedOrders.clear(); // Clear the set
+                querySnapshot.forEach(doc => {
+                    const order = doc.data();
+                    addedOrders.set(doc.id, order);
+                    renderOrder(order, doc.id);
                 });
+            });
         }
 
-        function playNotificationSound() {
-            const audio = new Audio('https://jlmksi.github.io/restaurant-order/assets/notification.mp3');
-            audio.play().catch(error => console.error('Audio play failed: ', error));
-        }
-
-        db.collection('orders').orderBy('time', 'asc').limit(1).onSnapshot(snapshot => {
-            if (!snapshot.empty) {
-                playNotificationSound();
-                const popup = document.createElement('div');
-                popup.style.position = 'fixed';
-                popup.style.top = '50%';
-                popup.style.left = '50%';
-                popup.style.transform = 'translate(-50%, -50%)';
-                popup.style.padding = '1em';
-                popup.style.backgroundColor = 'white';
-                popup.style.border = '1px solid #ddd';
-                popup.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
-                popup.style.zIndex = '1000';
-                popup.innerText = '새로운 주문이 들어왔습니다!';
-                document.body.appendChild(popup);
-                setTimeout(() => {
-                    document.body.removeChild(popup);
-                }, 5000);
-            }
-        });
-
-        setInterval(() => {
-            window.location.reload();
-        }, 5000);
+        loadOrders();
     </script>
 </body>
 </html>
