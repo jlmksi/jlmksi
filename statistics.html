@@ -85,6 +85,7 @@
                 <th>주문 시간</th>
                 <th>주문 내용</th>
                 <th>총 금액</th>
+                <th>취소</th>
             </tr>
         </thead>
         <tbody id="statisticsBody"></tbody>
@@ -106,6 +107,8 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
+        let orderNumberCounter = 1;
+
         function formatPrice(price) {
             return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';
         }
@@ -118,29 +121,29 @@
         function loadStatistics() {
             const statisticsBody = document.getElementById('statisticsBody');
             const totalRevenueElement = document.getElementById('totalRevenue');
-            let totalRevenue = 0;
-
-            db.collection('orders').orderBy('orderTime', 'asc').get().then(snapshot => {
+            db.collection('orders').orderBy('time', 'asc').onSnapshot(snapshot => {
                 statisticsBody.innerHTML = '';
-                snapshot.forEach((doc, index) => {
+                let totalRevenue = 0;
+                snapshot.forEach((doc) => {
                     const order = doc.data();
                     const row = document.createElement('tr');
-                    const orderTime = formatDate(order.orderTime);
+                    const orderTime = formatDate(order.time.toDate());
                     let orderDetails = '';
                     for (const item in order.orders) {
                         orderDetails += `${item} ${order.orders[item].quantity}개<br>`;
                     }
                     row.innerHTML = `
-                        <td>${order.orderNumber}</td>
+                        <td>${orderNumberCounter}</td>
                         <td>${order.tableNumber}</td>
                         <td>${orderTime}</td>
                         <td>${orderDetails}</td>
                         <td>${formatPrice(order.totalPrice)}</td>
+                        <td><button onclick="cancelOrder('${doc.id}', ${orderNumberCounter})">주문 취소</button></td>
                     `;
                     statisticsBody.appendChild(row);
                     totalRevenue += order.totalPrice;
+                    orderNumberCounter++;
                 });
-
                 totalRevenueElement.textContent = `총 매출: ${formatPrice(totalRevenue)}`;
             });
         }
@@ -151,8 +154,17 @@
                     snapshot.forEach(doc => {
                         db.collection('orders').doc(doc.id).delete();
                     });
-                    loadStatistics();
-                    alert('주문이 초기화되었습니다');
+                });
+                alert('주문이 초기화되었습니다');
+            }
+        }
+
+        function cancelOrder(id, orderNumber) {
+            if (confirm(`주문 번호 ${orderNumber}을(를) 취소하시겠습니까?`)) {
+                db.collection('orders').doc(id).delete().then(() => {
+                    alert('주문이 취소되었습니다');
+                }).catch(error => {
+                    console.error('Error cancelling order: ', error);
                 });
             }
         }
