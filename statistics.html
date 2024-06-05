@@ -69,6 +69,15 @@
             margin-top: 1em;
             margin-right: 1em;
         }
+        .cancel-button {
+            background-color: red;
+            color: white;
+            border: none;
+            padding: 0.3em 0.5em;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 1em;
+        }
     </style>
 </head>
 <body>
@@ -137,7 +146,7 @@
                         <td>${orderTime}</td>
                         <td>${orderDetails}</td>
                         <td>${formatPrice(order.totalPrice)}</td>
-                        <td><button onclick="cancelOrder('${doc.id}', ${orderNumberCounter})">주문 취소</button></td>
+                        <td><button class="cancel-button" onclick="cancelOrder('${doc.id}', ${orderNumberCounter})">주문 취소</button></td>
                     `;
                     statisticsBody.appendChild(row);
                     totalRevenue += order.totalPrice;
