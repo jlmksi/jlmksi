@@ -93,7 +93,8 @@
             }
         }
 
-        const ws = new WebSocket('wss://restaurant-order-1.onrender.com');
+        const ws = new WebSocket('ws://localhost:8080');
+
         ws.onmessage = function(event) {
             const order = JSON.parse(event.data);
             const savedOrders = JSON.parse(localStorage.getItem('kitchenOrders')) || [];
