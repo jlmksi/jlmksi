@@ -5,7 +5,161 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>주문 페이지</title>
     <style>
-        /* 스타일 부분은 생략했습니다. */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f8f8;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #4CAF50;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.3em 2em;
+            border-radius: 0 0 10px 10px;
+            position: relative;
+        }
+        .icon-container {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 1px;
+        }
+        .container {
+            display: flex;
+            width: 100%;
+        }
+        .menu-container {
+            flex: 4;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 1em;
+        }
+        .menu-item {
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            margin: 0.5em;
+            padding: 0.5em;
+            width: calc(15% - 1em);
+            text-align: center;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            cursor: pointer;
+            position: relative;
+            height: 150px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .menu-item button {
+            background-color: transparent;
+            color: #4CAF50;
+            border: none;
+            padding: 0.3em;
+            cursor: pointer;
+            font-size: 1.5em;
+        }
+        .menu-item p {
+            margin: 0.5em 0;
+            color: black;
+            font-size: 1.2em;
+        }
+        .edit-button, .delete-button {
+            background-color: #4CAF50 !important;
+            color: white !important;
+            font-size: 0.8em !important;
+            padding: 0.2em 0.4em !important;
+            margin: 0.2em 0 !important;
+            border-radius: 3px !important;
+            border: none !important;
+            display: inline-block !important;
+        }
+        .order-summary {
+            flex: 1;
+            background-color: #fff;
+            border-left: 1px solid #ddd;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            padding: 1em;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+        }
+        .order-summary h2 {
+            text-align: center;
+        }
+        .order-summary ul {
+            list-style: none;
+            padding: 0;
+        }
+        .order-summary ul li {
+            padding: 0.5em 0;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .total-price {
+            text-align: center;
+            font-size: 1.2em;
+            margin-top: 1em;
+        }
+        .quantity-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.5em;
+        }
+        .quantity-controls .delete-button {
+            font-size: 0.7em;
+        }
+        .quantity-controls button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 0.5em;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .add-menu-button, .save-menu-button {
+            background-color: white;
+            color: #4CAF50;
+            border: 2px solid #4CAF50;
+            padding: 0.5em 1em;
+            cursor: pointer;
+            font-size: 1em;
+            border-radius: 5px;
+        }
+        .finalize-order-button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 1em;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 1em;
+            font-size: 1.2em;
+            border-radius: 5px;
+        }
+        .manage-link {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px;
+            border-radius: 10px;
+            text-align: center;
+            width: 50px;
+            height: 50px;
+            line-height: 30px;
+            text-decoration: none;
+            font-size: 1.5em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
     </style>
 </head>
 <body>
@@ -72,7 +226,7 @@
                 menuItem.setAttribute('data-price', item.price);
                 menuItem.setAttribute('onclick', `orderItem('${item.name}', ${item.price})`);
                 menuItem.innerHTML = `
-                    <button style="font-weight: bold;">${item.name}</button>
+                    <button>${item.name}</button>
                     <p>${formatPrice(item.price)}</p>
                     <div>
                         <button class="edit-button" onclick="editItem(event, this)">메뉴 수정</button>
@@ -210,26 +364,27 @@
             }
         }
 
-        async function saveOrder(tableNumber, orders, totalPrice) {
-            try {
-                const lastOrderSnapshot = await db.collection('orders').orderBy('orderNumber', 'desc').limit(1).get();
+        function saveOrder(tableNumber, orders, totalPrice) {
+            db.collection('orders').orderBy('orderNumber', 'desc').limit(1).get().then(querySnapshot => {
                 let lastOrderNumber = 0;
-                if (!lastOrderSnapshot.empty) {
-                    lastOrderNumber = lastOrderSnapshot.docs[0].data().orderNumber;
+                if (!querySnapshot.empty) {
+                    lastOrderNumber = querySnapshot.docs[0].data().orderNumber;
                 }
                 const newOrderNumber = lastOrderNumber + 1;
                 const orderData = { tableNumber, orders, totalPrice, time: new Date(), orderNumber: newOrderNumber };
 
-                await db.collection('orders').add(orderData);
-                console.log('Order saved to Firestore');
+                db.collection('orders').add(orderData)
+                    .then(() => {
+                        console.log('Order saved to Firestore');
+                    })
+                    .catch((error) => {
+                        console.error('Error saving order to Firestore: ', error);
+                    });
 
                 const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
                 savedOrders.push(orderData);
                 localStorage.setItem('savedOrders', JSON.stringify(savedOrders));
-            } catch (error) {
-                console.error('Error saving order to Firestore:', error);
-                alert('주문 저장에 실패했습니다. 네트워크 상태를 확인하고 다시 시도해 주세요.');
-            }
+            });
         }
 
         renderMenu();
