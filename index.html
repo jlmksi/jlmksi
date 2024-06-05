@@ -365,26 +365,18 @@
         }
 
         function saveOrder(tableNumber, orders, totalPrice) {
-            db.collection('orders').orderBy('orderNumber', 'desc').limit(1).get().then(querySnapshot => {
-                let lastOrderNumber = 0;
-                if (!querySnapshot.empty) {
-                    lastOrderNumber = querySnapshot.docs[0].data().orderNumber;
-                }
-                const newOrderNumber = lastOrderNumber + 1;
-                const orderData = { tableNumber, orders, totalPrice, time: new Date(), orderNumber: newOrderNumber };
+            const orderData = { tableNumber, orders, totalPrice, time: new Date() };
+            db.collection('orders').add(orderData)
+                .then(() => {
+                    console.log('Order saved to Firestore');
+                })
+                .catch((error) => {
+                    console.error('Error saving order to Firestore: ', error);
+                });
 
-                db.collection('orders').add(orderData)
-                    .then(() => {
-                        console.log('Order saved to Firestore');
-                    })
-                    .catch((error) => {
-                        console.error('Error saving order to Firestore: ', error);
-                    });
-
-                const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
-                savedOrders.push(orderData);
-                localStorage.setItem('savedOrders', JSON.stringify(savedOrders));
-            });
+            const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+            savedOrders.push(orderData);
+            localStorage.setItem('savedOrders', JSON.stringify(savedOrders));
         }
 
         renderMenu();
