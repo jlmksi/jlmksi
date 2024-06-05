@@ -89,6 +89,16 @@
             cursor: pointer;
             border-radius: 5px;
         }
+        .connection-status {
+            position: absolute;
+            top: 60px;
+            left: 10px;
+            background-color: white;
+            color: green;
+            border: 1px solid green;
+            padding: 0.5em 1em;
+            border-radius: 5px;
+        }
     </style>
 </head>
 <body>
@@ -97,6 +107,7 @@
         <a href="index.html" class="home-link">🏠</a>
         <button class="reset-button" onclick="resetOrders()">주문 초기화</button>
         <button class="reconnect-button" onclick="reconnectOrders()">다시 연결</button>
+        <div id="connectionStatus" class="connection-status">연결 상태: <span id="statusText">연결 중...</span></div>
     </header>
     <table>
         <thead>
@@ -118,6 +129,7 @@
     <script>
         const ordersBody = document.getElementById('ordersBody');
         const totalRevenueElement = document.getElementById('totalRevenue');
+        const statusText = document.getElementById('statusText');
         let totalRevenue = 0;
         let unsubscribe = null;
 
@@ -134,32 +146,41 @@
             if (unsubscribe) {
                 unsubscribe();
             }
-            unsubscribe = db.collection('orders').orderBy('orderNumber').onSnapshot((snapshot) => {
-                ordersBody.innerHTML = '';
-                totalRevenue = 0;
+            statusText.textContent = '연결 중...';
+            statusText.style.color = 'green';
+            unsubscribe = db.collection('orders').orderBy('orderNumber').onSnapshot(
+                (snapshot) => {
+                    ordersBody.innerHTML = '';
+                    totalRevenue = 0;
 
-                snapshot.forEach((doc) => {
-                    const order = doc.data();
-                    const row = document.createElement('tr');
-                    const orderTime = formatDate(order.time.toDate());
-                    let orderDetails = '';
-                    for (const item in order.orders) {
-                        orderDetails += `${item} ${order.orders[item].quantity}개<br>`;
-                    }
-                    row.innerHTML = `
-                        <td>${order.orderNumber}</td>
-                        <td>${order.tableNumber}</td>
-                        <td>${orderTime}</td>
-                        <td>${orderDetails}</td>
-                        <td>${formatPrice(order.totalPrice)}</td>
-                        <td><button class="cancel-button" onclick="cancelOrder('${doc.id}')">취소</button></td>
-                    `;
-                    ordersBody.appendChild(row);
-                    totalRevenue += order.totalPrice;
-                });
+                    snapshot.forEach((doc) => {
+                        const order = doc.data();
+                        const row = document.createElement('tr');
+                        const orderTime = formatDate(order.time.toDate());
+                        let orderDetails = '';
+                        for (const item in order.orders) {
+                            orderDetails += `${item} ${order.orders[item].quantity}개<br>`;
+                        }
+                        row.innerHTML = `
+                            <td>${order.orderNumber}</td>
+                            <td>${order.tableNumber}</td>
+                            <td>${orderTime}</td>
+                            <td>${orderDetails}</td>
+                            <td>${formatPrice(order.totalPrice)}</td>
+                            <td><button class="cancel-button" onclick="cancelOrder('${doc.id}')">취소</button></td>
+                        `;
+                        ordersBody.appendChild(row);
+                        totalRevenue += order.totalPrice;
+                    });
 
-                totalRevenueElement.textContent = `총 매출: ${formatPrice(totalRevenue)}`;
-            });
+                    totalRevenueElement.textContent = `총 매출: ${formatPrice(totalRevenue)}`;
+                },
+                (error) => {
+                    console.error("Error loading orders: ", error);
+                    statusText.textContent = '연결 끊김';
+                    statusText.style.color = 'red';
+                }
+            );
         }
 
         function cancelOrder(docId) {
