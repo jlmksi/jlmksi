@@ -41,7 +41,7 @@
             margin: 1em;
             display: flex;
             flex-wrap: wrap;
-            justify-content: center;
+            justify-content: flex-start; /* 왼쪽 정렬 */
         }
         .order-item {
             background-color: white;
@@ -97,11 +97,12 @@
         const orderList = document.getElementById('orderList');
         const notificationSound = document.getElementById('notificationSound');
 
-        function renderOrder(order, docId) {
+        function renderOrder(order, docId, orderNumber) {
             const orderItem = document.createElement('div');
             orderItem.className = 'order-item';
             orderItem.id = `order-${docId}`;
-            let orderDetails = `<strong>테이블 번호: ${order.tableNumber}</strong><br>`;
+            let orderDetails = `<strong>주문 번호: ${orderNumber}</strong><br>`;
+            orderDetails += `<strong>테이블 번호: ${order.tableNumber}</strong><br>`;
             for (const item in order.orders) {
                 orderDetails += `${item} ${order.orders[item].quantity}개<br>`;
             }
@@ -125,7 +126,7 @@
             }
         }
 
-        let addedOrders = new Set();
+        let addedOrders = new Map();
 
         function playNotificationSound() {
             notificationSound.play().catch(error => {
@@ -152,19 +153,23 @@
 
         db.collection('orders').onSnapshot(snapshot => {
             snapshot.docChanges().forEach(change => {
-                if (change.type === 'added' && !addedOrders.has(change.doc.id)) {
+                const docId = change.doc.id;
+                if (change.type === 'added' && !addedOrders.has(docId)) {
                     const order = change.doc.data();
-                    renderOrder(order, change.doc.id);
+                    addedOrders.set(docId, order);
                     showAlertWithTimeout('주문이 들어왔습니다');
                     playNotificationSound();
-                    addedOrders.add(change.doc.id);
                 }
                 if (change.type === 'removed') {
-                    const orderItem = document.getElementById(`order-${change.doc.id}`);
-                    if (orderItem) {
-                        orderItem.remove();
-                    }
+                    addedOrders.delete(docId);
                 }
+            });
+
+            // 주문 순서대로 다시 렌더링
+            orderList.innerHTML = '';
+            let orderNumber = 1;
+            addedOrders.forEach((order, docId) => {
+                renderOrder(order, docId, orderNumber++);
             });
         });
 
@@ -172,10 +177,11 @@
             db.collection('orders').get().then(querySnapshot => {
                 orderList.innerHTML = ''; // Clear existing orders
                 addedOrders.clear(); // Clear the set
+                let orderNumber = 1;
                 querySnapshot.forEach(doc => {
                     const order = doc.data();
-                    renderOrder(order, doc.id);
-                    addedOrders.add(doc.id);
+                    addedOrders.set(doc.id, order);
+                    renderOrder(order, doc.id, orderNumber++);
                 });
             });
         }
