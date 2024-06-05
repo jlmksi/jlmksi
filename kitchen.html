@@ -47,6 +47,11 @@
             margin-bottom: 1em;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
             position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 150px;
+            font-size: 1.2em;
         }
         .order-item button {
             background-color: #4CAF50;
@@ -55,9 +60,7 @@
             padding: 0.5em 1em;
             cursor: pointer;
             border-radius: 5px;
-            position: absolute;
-            right: 1em;
-            bottom: 1em;
+            align-self: flex-end;
         }
     </style>
 </head>
@@ -89,28 +92,32 @@
         const orderList = document.getElementById('orderList');
         const notificationSound = document.getElementById('notificationSound');
 
-        function renderOrder(order, index) {
+        function renderOrder(order, docId) {
             const orderItem = document.createElement('div');
             orderItem.className = 'order-item';
-            orderItem.id = `order-${index}`;
+            orderItem.id = `order-${docId}`;
             let orderDetails = `<strong>테이블 번호: ${order.tableNumber}</strong><br>`;
             for (const item in order.orders) {
                 orderDetails += `${item} ${order.orders[item].quantity}개<br>`;
             }
             orderItem.innerHTML = `
                 ${orderDetails}
-                <button onclick="completeOrder(${index})">완료</button>
+                <button onclick="completeOrder('${docId}')">완료</button>
             `;
             orderList.appendChild(orderItem);
         }
 
-        function completeOrder(index) {
+        function completeOrder(docId) {
             if (confirm('이 주문을 완료하시겠습니까?')) {
-                const orderItem = document.getElementById(`order-${index}`);
-                if (orderItem) {
-                    orderItem.remove();
-                }
-                alert('주문이 완료되었습니다');
+                db.collection('orders').doc(docId).delete().then(() => {
+                    const orderItem = document.getElementById(`order-${docId}`);
+                    if (orderItem) {
+                        orderItem.remove();
+                    }
+                    alert('주문이 완료되었습니다');
+                }).catch((error) => {
+                    console.error('Error removing document: ', error);
+                });
             }
         }
 
@@ -120,27 +127,6 @@
             snapshot.docChanges().forEach(change => {
                 if (change.type === 'added' && !addedOrders.has(change.doc.id)) {
                     const order = change.doc.data();
-                    renderOrder(order, orderList.children.length);
-                    notificationSound.play();
-                    alert('주문이 들어왔습니다');
-                    addedOrders.add(change.doc.id);
-                }
-            });
-        });
-
-        function loadOrders() {
-            db.collection('orders').get().then(querySnapshot => {
-                orderList.innerHTML = ''; // Clear existing orders
-                addedOrders.clear(); // Clear the set
-                querySnapshot.forEach(doc => {
-                    const order = doc.data();
-                    renderOrder(order, orderList.children.length);
-                    addedOrders.add(doc.id);
-                });
-            });
-        }
-
-        loadOrders();
-    </script>
-</body>
-</html>
+                    renderOrder(order, change.doc.id);
+                    notificationSound.play().catch(error => {
+                        con
