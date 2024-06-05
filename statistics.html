@@ -14,116 +14,174 @@
         header {
             background-color: #4CAF50;
             color: white;
-            text-align: center;
-            padding: 1em 0;
-            border-radius: 0 0 10px 10px;
-        }
-        .container {
             padding: 1em;
+            text-align: center;
+            position: relative;
         }
         table {
             width: 100%;
             border-collapse: collapse;
+            margin: 1em 0;
         }
         table, th, td {
             border: 1px solid #ddd;
         }
         th, td {
-            padding: 1em;
-            text-align: left;
+            padding: 0.5em;
+            text-align: center;
         }
         th {
+            background-color: #f4f4f4;
+        }
+        .reset-button {
+            background-color: white;
+            color: red;
+            border: 1px solid red;
+            padding: 0.5em 1em;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-top: 10px;
+            position: absolute;
+            top: 60px;
+            right: 10px;
+        }
+        .home-link {
             background-color: #4CAF50;
             color: white;
+            padding: 10px;
+            border-radius: 10px;
+            text-align: center;
+            width: 50px;
+            height: 50px;
+            line-height: 30px;
+            text-decoration: none;
+            font-size: 1.5em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+        .total-price {
+            text-align: right;
+            font-size: 2em;
+            margin-top: 1em;
+            margin-right: 1em;
+        }
+        .cancel-button {
+            background-color: red;
+            color: white;
+            border: none;
+            padding: 0.3em 0.5em;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 1em;
         }
     </style>
 </head>
 <body>
     <header>
         <h1>주문 통계</h1>
-        <button onclick="resetOrders()">주문 초기화</button>
+        <a href="index.html" class="home-link">🏠</a>
+        <button class="reset-button" onclick="resetOrders()">주문 초기화</button>
     </header>
-    <div class="container">
-        <table>
-            <thead>
-                <tr>
-                    <th>주문 번호</th>
-                    <th>테이블 번호</th>
-                    <th>주문 시간</th>
-                    <th>주문 내용</th>
-                    <th>총 금액</th>
-                </tr>
-            </thead>
-            <tbody id="ordersTable"></tbody>
-        </table>
-        <div id="totalSales"></div>
-        <div id="itemStats"></div>
-    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>주문 번호</th>
+                <th>테이블 번호</th>
+                <th>주문 시간</th>
+                <th>주문 내용</th>
+                <th>총 금액</th>
+                <th>취소</th>
+            </tr>
+        </thead>
+        <tbody id="statisticsBody"></tbody>
+    </table>
+    <div class="total-price" id="totalRevenue">총 매출: 0원</div>
     <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore-compat.js"></script>
-    <script src="firebase-config.js"></script>
     <script>
-        const ordersTable = document.getElementById('ordersTable');
-        const totalSales = document.getElementById('totalSales');
-        const itemStats = document.getElementById('itemStats');
-        let totalAmount = 0;
-        let itemCount = {};
+        const firebaseConfig = {
+            apiKey: "AIzaSyCtRN3QMnHxLQEKAAn0y3q8qRvjDs8BKJA",
+            authDomain: "restaurant-orders-new.firebaseapp.com",
+            projectId: "restaurant-orders-new",
+            storageBucket: "restaurant-orders-new.appspot.com",
+            messagingSenderId: "500015809437",
+            appId: "1:500015809437:web:49d6b18dbea33114d06574",
+            measurementId: "G-79XGTK3L3F"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        function formatPrice(price) {
+            return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';
+        }
 
         function formatDate(dateString) {
-            const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
-            return new Date(dateString).toLocaleDateString('ko-KR', options);
+            const date = new Date(dateString);
+            return date.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
         }
 
-        function loadOrders() {
-            db.collection('orders').orderBy('orderNumber').onSnapshot((snapshot) => {
-                ordersTable.innerHTML = '';
-                totalAmount = 0;
-                itemCount = {};
-                snapshot.forEach((doc) => {
+        function loadStatistics() {
+            const statisticsBody = document.getElementById('statisticsBody');
+            const totalRevenueElement = document.getElementById('totalRevenue');
+            let totalRevenue = 0;
+            db.collection('orders').orderBy('orderNumber', 'asc').onSnapshot(snapshot => {
+                statisticsBody.innerHTML = '';
+                snapshot.forEach(doc => {
                     const order = doc.data();
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
+                    const row = document.createElement('tr');
+                    const orderTime = formatDate(order.time.toDate());
+                    let orderDetails = '';
+                    for (const item in order.orders) {
+                        orderDetails += `${item} ${order.orders[item].quantity}개<br>`;
+                    }
+                    row.innerHTML = `
                         <td>${order.orderNumber}</td>
                         <td>${order.tableNumber}</td>
-                        <td>${formatDate(order.time)}</td>
-                        <td>${Object.keys(order.orders).map(item => `${item} ${order.orders[item].quantity}개`).join(', ')}</td>
-                        <td>${order.totalPrice}원</td>
+                        <td>${orderTime}</td>
+                        <td>${orderDetails}</td>
+                        <td>${formatPrice(order.totalPrice)}</td>
+                        <td><button class="cancel-button" onclick="cancelOrder('${doc.id}', ${order.orderNumber})">주문 취소</button></td>
                     `;
-                    ordersTable.appendChild(tr);
-                    totalAmount += order.totalPrice;
-                    
-                    for (const item in order.orders) {
-                        if (itemCount[item]) {
-                            itemCount[item] += order.orders[item].quantity;
-                        } else {
-                            itemCount[item] = order.orders[item].quantity;
-                        }
-                    }
+                    statisticsBody.appendChild(row);
+                    totalRevenue += order.totalPrice;
                 });
-                totalSales.innerHTML = `<h3>총 매출: ${totalAmount.toLocaleString()}원</h3>`;
-                displayItemStats();
+                totalRevenueElement.textContent = `총 매출: ${formatPrice(totalRevenue)}`;
             });
-        }
-
-        function displayItemStats() {
-            itemStats.innerHTML = '<h3>메뉴 판매 통계</h3><ul>';
-            for (const item in itemCount) {
-                itemStats.innerHTML += `<li>${item}: ${itemCount[item]}개</li>`;
-            }
-            itemStats.innerHTML += '</ul>';
         }
 
         function resetOrders() {
             if (confirm('모든 주문을 초기화하시겠습니까?')) {
                 db.collection('orders').get().then(snapshot => {
+                    const batch = db.batch();
                     snapshot.forEach(doc => {
-                        db.collection('orders').doc(doc.id).delete();
+                        batch.delete(doc.ref);
                     });
+                    return batch.commit();
+                }).then(() => {
+                    db.collection('orders').doc('orderCounter').set({ counter: 0 });
+                    alert('주문이 초기화되었습니다');
+                }).catch(error => {
+                    console.error('Error resetting orders: ', error);
                 });
             }
         }
 
-        loadOrders();
+        function cancelOrder(id, orderNumber) {
+            if (confirm(`주문 번호 ${orderNumber}을(를) 취소하시겠습니까?`)) {
+                db.collection('orders').doc(id).delete().then(() => {
+                    alert('주문이 취소되었습니다');
+                }).catch(error => {
+                    console.error('Error cancelling order: ', error);
+                });
+            }
+        }
+
+        loadStatistics();
     </script>
 </body>
 </html>
