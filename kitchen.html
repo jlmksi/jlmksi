@@ -68,10 +68,10 @@
     </header>
     <div class="order-list" id="orderList"></div>
     <audio id="notificationSound" src="notification.mp3"></audio>
-    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore-compat.js"></script>
     <script>
-        // Firebase configuration
+        // Firebase 설정
         const firebaseConfig = {
             apiKey: "AIzaSyC3FKMzBKOqxKnYIJeU7TimVsZDeOZ2K64",
             authDomain: "restaurant-order-9fd1f.firebaseapp.com",
@@ -82,7 +82,7 @@
             measurementId: "G-VFB4GPC024"
         };
 
-        // Initialize Firebase
+        // Firebase 초기화
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
