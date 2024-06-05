@@ -157,6 +157,10 @@
             });
         }
 
+        document.body.addEventListener('click', () => {
+            playNotificationSound();
+        });
+
         db.collection('orders').orderBy('orderNumber').onSnapshot((snapshot) => {
             snapshot.docChanges().forEach((change) => {
                 if (change.type === 'added') {
