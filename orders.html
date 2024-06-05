@@ -16,34 +16,24 @@
             color: white;
             padding: 1em;
             text-align: center;
-            position: relative;
+            border-radius: 0 0 10px 10px;
         }
         table {
             width: 100%;
             border-collapse: collapse;
             margin: 1em 0;
         }
-        table, th, td {
-            border: 1px solid #ddd;
-        }
         th, td {
-            padding: 0.5em;
-            text-align: center;
+            padding: 1em;
+            border: 1px solid #ddd;
         }
         th {
             background-color: #f4f4f4;
         }
-        .reset-button {
-            background-color: white;
-            color: red;
-            border: 1px solid red;
-            padding: 0.5em 1em;
-            cursor: pointer;
-            border-radius: 5px;
-            margin-top: 10px;
-            position: absolute;
-            top: 60px;
-            right: 10px;
+        .total-sales {
+            text-align: right;
+            padding: 1em;
+            font-size: 1.2em;
         }
         .home-link {
             background-color: #4CAF50;
@@ -61,13 +51,16 @@
             justify-content: center;
             position: absolute;
             top: 10px;
-            right: 10px;
+            left: 10px;
         }
-        .total-price {
-            text-align: right;
-            font-size: 2em;
-            margin-top: 1em;
-            margin-right: 1em;
+        .cancel-button {
+            background-color: white;
+            color: #f44336;
+            border: 2px solid #f44336;
+            padding: 0.5em 1em;
+            cursor: pointer;
+            font-size: 1em;
+            border-radius: 5px;
         }
     </style>
 </head>
@@ -75,7 +68,6 @@
     <header>
         <h1>주문 현황</h1>
         <a href="index.html" class="home-link">🏠</a>
-        <button class="reset-button" onclick="resetOrders()">주문 초기화</button>
     </header>
     <table>
         <thead>
@@ -88,12 +80,13 @@
                 <th>주문 취소</th>
             </tr>
         </thead>
-        <tbody id="ordersBody"></tbody>
+        <tbody id="ordersTableBody"></tbody>
     </table>
-    <div class="total-price" id="totalRevenue">총 매출: 0원</div>
+    <div class="total-sales" id="totalSales">총 매출: 0원</div>
     <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore-compat.js"></script>
     <script>
+        // Firebase 설정
         const firebaseConfig = {
             apiKey: "AIzaSyCtRN3QMnHxLQEKAAn0y3q8qRvjDs8BKJA",
             authDomain: "restaurant-orders-new.firebaseapp.com",
@@ -104,6 +97,7 @@
             measurementId: "G-79XGTK3L3F"
         };
 
+        // Firebase 초기화
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
@@ -111,59 +105,40 @@
             return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';
         }
 
-        function formatDate(dateString) {
-            const date = new Date(dateString);
-            return date.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+        function formatDate(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleString();
         }
 
         function loadOrders() {
-            const ordersBody = document.getElementById('ordersBody');
-            const totalRevenueElement = document.getElementById('totalRevenue');
-            let totalRevenue = 0;
-
-            db.collection('orders').orderBy('time', 'asc').get().then((querySnapshot) => {
-                ordersBody.innerHTML = '';
-                querySnapshot.forEach((doc, index) => {
+            db.collection('orders').get().then(querySnapshot => {
+                const ordersTableBody = document.getElementById('ordersTableBody');
+                let totalSales = 0;
+                querySnapshot.forEach(doc => {
                     const order = doc.data();
-                    const orderTime = formatDate(order.time.toDate());
-                    let orderDetails = '';
-                    for (const item in order.orders) {
-                        orderDetails += `${item} ${order.orders[item].quantity}개<br>`;
-                    }
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${index + 1}</td>
+                    totalSales += order.totalPrice;
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${doc.id}</td>
                         <td>${order.tableNumber}</td>
-                        <td>${orderTime}</td>
-                        <td>${orderDetails}</td>
+                        <td>${formatDate(order.time)}</td>
+                        <td>${Object.keys(order.orders).map(key => `${key} ${order.orders[key].quantity}개`).join(', ')}</td>
                         <td>${formatPrice(order.totalPrice)}</td>
-                        <td><button onclick="cancelOrder('${doc.id}')">취소</button></td>
+                        <td><button class="cancel-button" onclick="cancelOrder('${doc.id}')">취소</button></td>
                     `;
-                    ordersBody.appendChild(row);
-                    totalRevenue += order.totalPrice;
+                    ordersTableBody.appendChild(tr);
                 });
-
-                totalRevenueElement.textContent = `총 매출: ${formatPrice(totalRevenue)}`;
+                document.getElementById('totalSales').textContent = `총 매출: ${formatPrice(totalSales)}`;
             });
-        }
-
-        function resetOrders() {
-            if (confirm('모든 주문을 초기화하시겠습니까?')) {
-                db.collection('orders').get().then((querySnapshot) => {
-                    querySnapshot.forEach((doc) => {
-                        db.collection('orders').doc(doc.id).delete();
-                    });
-                    loadOrders();
-                    alert('주문이 초기화되었습니다');
-                });
-            }
         }
 
         function cancelOrder(orderId) {
             if (confirm('주문을 취소하시겠습니까?')) {
                 db.collection('orders').doc(orderId).delete().then(() => {
-                    loadOrders();
-                    alert('주문이 취소되었습니다');
+                    alert('주문이 취소되었습니다.');
+                    location.reload();
+                }).catch(error => {
+                    console.error('Error removing document: ', error);
                 });
             }
         }
