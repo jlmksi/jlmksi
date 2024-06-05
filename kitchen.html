@@ -122,7 +122,7 @@
                 <div>
                     ${Object.entries(order.orders).map(([name, details]) => `<p class="menu">${name}: ${details.quantity}개</p>`).join('')}
                 </div>
-                <button class="complete-button" onclick="completeOrder('${docId}')">완료</button>
+                <button class="complete-button" onclick="confirmCompleteOrder('${docId}')">완료</button>
             `;
             orderList.appendChild(orderDiv);
         }
@@ -140,6 +140,12 @@
             setTimeout(() => {
                 alertMessage.style.display = 'none';
             }, 5000);
+        }
+
+        function confirmCompleteOrder(docId) {
+            if (confirm('주문을 완료하시겠습니까?')) {
+                completeOrder(docId);
+            }
         }
 
         function completeOrder(docId) {
