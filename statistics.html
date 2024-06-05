@@ -128,11 +128,10 @@
         function loadStatistics() {
             const statisticsBody = document.getElementById('statisticsBody');
             const totalRevenueElement = document.getElementById('totalRevenue');
-            let orderNumberCounter = 1;
-            db.collection('orders').orderBy('time', 'asc').onSnapshot(snapshot => {
+            let totalRevenue = 0;
+            db.collection('orders').orderBy('orderNumber', 'asc').onSnapshot(snapshot => {
                 statisticsBody.innerHTML = '';
-                let totalRevenue = 0;
-                snapshot.forEach((doc) => {
+                snapshot.forEach(doc => {
                     const order = doc.data();
                     const row = document.createElement('tr');
                     const orderTime = formatDate(order.time.toDate());
@@ -141,16 +140,15 @@
                         orderDetails += `${item} ${order.orders[item].quantity}개<br>`;
                     }
                     row.innerHTML = `
-                        <td>${orderNumberCounter}</td>
+                        <td>${order.orderNumber}</td>
                         <td>${order.tableNumber}</td>
                         <td>${orderTime}</td>
                         <td>${orderDetails}</td>
                         <td>${formatPrice(order.totalPrice)}</td>
-                        <td><button class="cancel-button" onclick="cancelOrder('${doc.id}', ${orderNumberCounter})">주문 취소</button></td>
+                        <td><button class="cancel-button" onclick="cancelOrder('${doc.id}', ${order.orderNumber})">주문 취소</button></td>
                     `;
                     statisticsBody.appendChild(row);
                     totalRevenue += order.totalPrice;
-                    orderNumberCounter++;
                 });
                 totalRevenueElement.textContent = `총 매출: ${formatPrice(totalRevenue)}`;
             });
@@ -159,11 +157,17 @@
         function resetOrders() {
             if (confirm('모든 주문을 초기화하시겠습니까?')) {
                 db.collection('orders').get().then(snapshot => {
+                    const batch = db.batch();
                     snapshot.forEach(doc => {
-                        db.collection('orders').doc(doc.id).delete();
+                        batch.delete(doc.ref);
                     });
+                    return batch.commit();
+                }).then(() => {
+                    db.collection('orders').doc('orderCounter').set({ counter: 0 });
+                    alert('주문이 초기화되었습니다');
+                }).catch(error => {
+                    console.error('Error resetting orders: ', error);
                 });
-                alert('주문이 초기화되었습니다');
             }
         }
 
