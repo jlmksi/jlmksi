@@ -47,7 +47,7 @@
             font-size: 0.8em;
         }
         .order .table-number, .order .menu {
-            font-size: 1.5em; /* 폰트 크기 증가 */
+            font-size: 1.5em;
             color: green;
             font-weight: bold;
         }
@@ -76,7 +76,7 @@
             transform: translate(-50%, -50%);
             z-index: 1000;
             border-radius: 10px;
-            font-size: 2em; /* 글씨 크기 증가 */
+            font-size: 2em;
             display: none;
         }
     </style>
@@ -164,6 +164,8 @@
                     playNotificationSound();
                     showAlert('주문이 들어왔습니다');
                 }
+            }, error => {
+                console.error("Error loading orders: ", error);
             });
         }
 
