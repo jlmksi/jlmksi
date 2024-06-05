@@ -35,9 +35,21 @@
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
             position: relative;
         }
-        .order h3, .order p {
+        .order h3 {
             margin: 0.5em 0;
             font-size: 1.2em;
+        }
+        .order p {
+            margin: 0.5em 0;
+            font-size: 1em;
+        }
+        .order .order-time {
+            font-size: 0.8em;
+        }
+        .order .table-number, .order .menu {
+            font-size: 1.2em;
+            color: blue;
+            font-weight: bold;
         }
         .order div {
             border-top: 1px solid #ddd;
@@ -105,10 +117,10 @@
             orderDiv.id = `order-${docId}`;
             orderDiv.innerHTML = `
                 <h3>주문 번호: ${order.orderNumber}</h3>
-                <p>테이블 번호: ${order.tableNumber}</p>
-                <p>주문 시간: ${new Date(order.time.toDate()).toLocaleString('ko-KR')}</p>
+                <p class="table-number">테이블 번호: ${order.tableNumber}</p>
+                <p class="order-time">주문 시간: ${new Date(order.time.toDate()).toLocaleString('ko-KR')}</p>
                 <div>
-                    ${Object.entries(order.orders).map(([name, details]) => `<p>${name}: ${details.quantity}개</p>`).join('')}
+                    ${Object.entries(order.orders).map(([name, details]) => `<p class="menu">${name}: ${details.quantity}개</p>`).join('')}
                 </div>
                 <button class="complete-button" onclick="completeOrder('${docId}')">완료</button>
             `;
