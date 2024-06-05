@@ -45,6 +45,18 @@
             top: 60px;
             right: 10px;
         }
+        .reconnect-button {
+            background-color: white;
+            color: blue;
+            border: 1px solid blue;
+            padding: 0.5em 1em;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-top: 10px;
+            position: absolute;
+            top: 60px;
+            right: 80px;
+        }
         .home-link {
             background-color: #4CAF50;
             color: white;
@@ -84,6 +96,7 @@
         <h1>주문 목록</h1>
         <a href="index.html" class="home-link">🏠</a>
         <button class="reset-button" onclick="resetOrders()">주문 초기화</button>
+        <button class="reconnect-button" onclick="reconnectOrders()">다시 연결</button>
     </header>
     <table>
         <thead>
@@ -106,6 +119,7 @@
         const ordersBody = document.getElementById('ordersBody');
         const totalRevenueElement = document.getElementById('totalRevenue');
         let totalRevenue = 0;
+        let unsubscribe = null;
 
         function formatPrice(price) {
             return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';
@@ -117,7 +131,10 @@
         }
 
         function loadOrders() {
-            db.collection('orders').orderBy('orderNumber').onSnapshot((snapshot) => {
+            if (unsubscribe) {
+                unsubscribe();
+            }
+            unsubscribe = db.collection('orders').orderBy('orderNumber').onSnapshot((snapshot) => {
                 ordersBody.innerHTML = '';
                 totalRevenue = 0;
 
@@ -169,6 +186,11 @@
                     });
                 });
             }
+        }
+
+        function reconnectOrders() {
+            loadOrders();
+            alert('실시간 연결이 재설정되었습니다.');
         }
 
         loadOrders();
