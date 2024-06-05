@@ -52,19 +52,19 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            width: 200px; /* 너비를 줄입니다 */
-            height: 200px; /* 높이를 줄입니다 */
-            font-size: 2em; /* 글씨 크기를 더 키웁니다 */
+            width: 200px; /* 박스 크기 */
+            height: 200px; /* 박스 크기 */
+            font-size: 1.5em; /* 글씨 크기 */
         }
         .order-item button {
             background-color: #4CAF50;
             color: white;
             border: none;
-            padding: 0.5em 1em;
+            padding: 0.3em 0.5em;
             cursor: pointer;
             border-radius: 5px;
             align-self: flex-end;
-            font-size: 0.8em; /* 버튼 글씨 크기 조정 */
+            font-size: 1em; /* 버튼 글씨 크기 */
         }
     </style>
 </head>
@@ -118,7 +118,6 @@
                     if (orderItem) {
                         orderItem.remove();
                     }
-                    alert('주문이 완료되었습니다');
                 }).catch((error) => {
                     console.error('Error removing document: ', error);
                 });
@@ -133,14 +132,23 @@
             });
         }
 
+        function showAlertWithTimeout(message) {
+            alert(message);
+            setTimeout(() => {
+                window.alert = originalAlert;
+            }, 5000);
+        }
+
+        const originalAlert = window.alert;
         db.collection('orders').onSnapshot(snapshot => {
             snapshot.docChanges().forEach(change => {
                 if (change.type === 'added' && !addedOrders.has(change.doc.id)) {
                     const order = change.doc.data();
                     renderOrder(order, change.doc.id);
-                    alert('주문이 들어왔습니다');
+                    window.alert = () => {}; // 임시로 alert 대체
+                    showAlertWithTimeout('주문이 들어왔습니다');
+                    playNotificationSound();
                     addedOrders.add(change.doc.id);
-                    document.body.addEventListener('click', playNotificationSound, { once: true });
                 }
                 if (change.type === 'removed') {
                     const orderItem = document.getElementById(`order-${change.doc.id}`);
@@ -164,6 +172,7 @@
         }
 
         loadOrders();
+        setInterval(loadOrders, 5000); // 5초마다 페이지 새로 고침
     </script>
 </body>
 </html>
