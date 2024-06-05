@@ -57,7 +57,7 @@
         }
         .menu-item button {
             background-color: transparent;
-            color: black;
+            color: #4CAF50;
             border: none;
             padding: 0.3em;
             cursor: pointer;
@@ -365,7 +365,13 @@
         }
 
         function saveOrder(tableNumber, orders, totalPrice) {
-            const orderData = { tableNumber, orders, totalPrice, time: new Date() };
+            const orderData = { 
+                orderNumber: Date.now(),  // 고유한 주문 번호 생성
+                tableNumber, 
+                orders, 
+                totalPrice, 
+                orderTime: new Date().toISOString() // 주문 시간 저장
+            };
             db.collection('orders').add(orderData)
                 .then(() => {
                     console.log('Order saved to Firestore');
