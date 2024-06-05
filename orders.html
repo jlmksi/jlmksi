@@ -106,7 +106,6 @@
         const ordersBody = document.getElementById('ordersBody');
         const totalRevenueElement = document.getElementById('totalRevenue');
         let totalRevenue = 0;
-        let unsubscribe = null;
 
         function formatPrice(price) {
             return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';
@@ -118,10 +117,7 @@
         }
 
         function loadOrders() {
-            if (unsubscribe) {
-                unsubscribe();
-            }
-            unsubscribe = db.collection('orders').orderBy('orderNumber').onSnapshot((snapshot) => {
+            db.collection('orders').orderBy('orderNumber').onSnapshot((snapshot) => {
                 ordersBody.innerHTML = '';
                 totalRevenue = 0;
 
@@ -153,7 +149,6 @@
             if (confirm('주문을 취소하시겠습니까?')) {
                 db.collection('orders').doc(docId).delete().then(() => {
                     alert('주문이 취소되었습니다');
-                    loadOrders();
                 }).catch((error) => {
                     console.error('Error cancelling order: ', error);
                 });
