@@ -1,4 +1,4 @@
-// Firebase 설정
+// firebase-config.js
 const firebaseConfig = {
     apiKey: "AIzaSyCtRN3QMnHxLQEKAAn0y3q8qRvjDs8BKJA",
     authDomain: "restaurant-orders-new.firebaseapp.com",
@@ -9,6 +9,7 @@ const firebaseConfig = {
     measurementId: "G-79XGTK3L3F"
 };
 
-// Firebase 초기화
-firebase.initializeApp(firebaseConfig);
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
 const db = firebase.firestore();
