@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>주문 현황</title>
+    <title>주문 목록</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -33,6 +33,14 @@
         th {
             background-color: #f4f4f4;
         }
+        .cancel-button {
+            background-color: red;
+            color: white;
+            border: none;
+            padding: 0.5em 1em;
+            cursor: pointer;
+            border-radius: 5px;
+        }
         .home-link {
             background-color: #4CAF50;
             color: white;
@@ -61,7 +69,7 @@
 </head>
 <body>
     <header>
-        <h1>주문 현황</h1>
+        <h1>주문 목록</h1>
         <a href="index.html" class="home-link">🏠</a>
     </header>
     <table>
@@ -72,16 +80,34 @@
                 <th>주문 시간</th>
                 <th>주문 내용</th>
                 <th>총 금액</th>
+                <th>주문 취소</th>
             </tr>
         </thead>
         <tbody id="ordersBody"></tbody>
     </table>
     <div class="total-price" id="totalRevenue">총 매출: 0원</div>
+    <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore-compat.js"></script>
     <script>
+        // Firebase 설정
+        const firebaseConfig = {
+            apiKey: "AIzaSyC3FKMzBKOqxKnYIJeU7TimVsZDeOZ2K64",
+            authDomain: "restaurant-order-9fd1f.firebaseapp.com",
+            projectId: "restaurant-order-9fd1f",
+            storageBucket: "restaurant-order-9fd1f.appspot.com",
+            messagingSenderId: "911452281381",
+            appId: "1:911452281381:web:14d56045f7a2b00ace3dcc",
+            measurementId: "G-VFB4GPC024"
+        };
+
+        // Firebase 초기화
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
         const ordersBody = document.getElementById('ordersBody');
         const totalRevenueElement = document.getElementById('totalRevenue');
         let totalRevenue = 0;
-        
+
         function formatPrice(price) {
             return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';
         }
@@ -91,41 +117,44 @@
             return date.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
         }
 
-        function renderOrder(order, index) {
-            const row = document.createElement('tr');
-            const orderTime = formatDate(order.time || new Date());
-            let orderDetails = '';
-            for (const item in order.orders) {
-                orderDetails += `${item} ${order.orders[item].quantity}개<br>`;
-            }
-            row.innerHTML = `
-                <td>${index + 1}</td>
-                <td>${order.tableNumber}</td>
-                <td>${orderTime}</td>
-                <td>${orderDetails}</td>
-                <td>${formatPrice(order.totalPrice)}</td>
-            `;
-            ordersBody.appendChild(row);
-            totalRevenue += order.totalPrice;
-            totalRevenueElement.textContent = `총 매출: ${formatPrice(totalRevenue)}`;
+        function loadOrders() {
+            db.collection('orders').get().then(querySnapshot => {
+                ordersBody.innerHTML = '';
+                totalRevenue = 0;
+                querySnapshot.forEach((doc, index) => {
+                    const order = doc.data();
+                    const row = document.createElement('tr');
+                    const orderTime = formatDate(order.time.toDate());
+                    let orderDetails = '';
+                    for (const item in order.orders) {
+                        orderDetails += `${item} ${order.orders[item].quantity}개<br>`;
+                    }
+                    row.innerHTML = `
+                        <td>${index + 1}</td>
+                        <td>${order.tableNumber}</td>
+                        <td>${orderTime}</td>
+                        <td>${orderDetails}</td>
+                        <td>${formatPrice(order.totalPrice)}</td>
+                        <td><button class="cancel-button" onclick="cancelOrder('${doc.id}', ${index})">취소</button></td>
+                    `;
+                    ordersBody.appendChild(row);
+                    totalRevenue += order.totalPrice;
+                });
+                totalRevenueElement.textContent = `총 매출: ${formatPrice(totalRevenue)}`;
+            });
         }
 
-        const ws = new WebSocket('wss://restaurant-order-1.onrender.com');
-        ws.onmessage = function(event) {
-            const order = JSON.parse(event.data);
-            const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
-            savedOrders.push(order);
-            localStorage.setItem('savedOrders', JSON.stringify(savedOrders));
-            renderOrder(order, savedOrders.length - 1);
-        };
-
-        function loadOrders() {
-            const savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
-            ordersBody.innerHTML = '';
-            totalRevenue = 0;
-            savedOrders.forEach((order, index) => {
-                renderOrder(order, index);
-            });
+        function cancelOrder(orderId, rowIndex) {
+            if (confirm('이 주문을 취소하시겠습니까?')) {
+                db.collection('orders').doc(orderId).delete().then(() => {
+                    console.log('Order deleted from Firestore');
+                    document.getElementById('ordersBody').deleteRow(rowIndex);
+                    alert('주문이 취소되었습니다');
+                    loadOrders(); // Reload orders to update the total revenue
+                }).catch((error) => {
+                    console.error('Error deleting order: ', error);
+                });
+            }
         }
 
         loadOrders();
