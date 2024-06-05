@@ -14,125 +14,116 @@
         header {
             background-color: #4CAF50;
             color: white;
-            padding: 1em;
             text-align: center;
-            position: relative;
+            padding: 1em 0;
+            border-radius: 0 0 10px 10px;
+        }
+        .container {
+            padding: 1em;
         }
         table {
             width: 100%;
             border-collapse: collapse;
-            margin: 1em 0;
         }
         table, th, td {
             border: 1px solid #ddd;
         }
         th, td {
-            padding: 0.5em;
-            text-align: center;
+            padding: 1em;
+            text-align: left;
         }
         th {
             background-color: #4CAF50;
             color: white;
-        }
-        .total {
-            font-size: 1.2em;
-            text-align: right;
-            padding: 0.5em;
-        }
-        .manage-link {
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px;
-            border-radius: 10px;
-            text-align: center;
-            width: 50px;
-            height: 50px;
-            line-height: 30px;
-            text-decoration: none;
-            font-size: 1.5em;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: absolute;
-            right: 1em;
-            top: 1em;
         }
     </style>
 </head>
 <body>
     <header>
         <h1>주문 통계</h1>
-        <a href="index.html" class="manage-link">🏠</a>
+        <button onclick="resetOrders()">주문 초기화</button>
     </header>
-    <table>
-        <thead>
-            <tr>
-                <th>주문 번호</th>
-                <th>테이블 번호</th>
-                <th>주문 시간</th>
-                <th>주문 내용</th>
-                <th>총 금액</th>
-            </tr>
-        </thead>
-        <tbody id="ordersTable"></tbody>
-    </table>
-    <div class="total" id="totalRevenue">총 매출: 0원</div>
-    <div class="total" id="totalItemsSold">총 판매량: 0개</div>
+    <div class="container">
+        <table>
+            <thead>
+                <tr>
+                    <th>주문 번호</th>
+                    <th>테이블 번호</th>
+                    <th>주문 시간</th>
+                    <th>주문 내용</th>
+                    <th>총 금액</th>
+                </tr>
+            </thead>
+            <tbody id="ordersTable"></tbody>
+        </table>
+        <div id="totalSales"></div>
+        <div id="itemStats"></div>
+    </div>
     <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
     <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyCtRN3QMnHxLQEKAAn0y3q8qRvjDs8BKJA",
-            authDomain: "restaurant-orders-new.firebaseapp.com",
-            projectId: "restaurant-orders-new",
-            storageBucket: "restaurant-orders-new.appspot.com",
-            messagingSenderId: "500015809437",
-            appId: "1:500015809437:web:49d6b18dbea33114d06574",
-            measurementId: "G-79XGTK3L3F"
-        };
-
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
         const ordersTable = document.getElementById('ordersTable');
-        const totalRevenueElement = document.getElementById('totalRevenue');
-        const totalItemsSoldElement = document.getElementById('totalItemsSold');
-        let totalRevenue = 0;
-        let totalItemsSold = 0;
-
-        function formatPrice(price) {
-            return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';
-        }
+        const totalSales = document.getElementById('totalSales');
+        const itemStats = document.getElementById('itemStats');
+        let totalAmount = 0;
+        let itemCount = {};
 
         function formatDate(dateString) {
-            const date = new Date(dateString);
-            return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()} ${date.getHours()}:${date.getMinutes()}`;
+            const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+            return new Date(dateString).toLocaleDateString('ko-KR', options);
         }
 
-        function updateTable() {
-            ordersTable.innerHTML = '';
-            totalRevenue = 0;
-            totalItemsSold = 0;
-            db.collection('orders').orderBy('orderNumber').get().then(snapshot => {
-                snapshot.forEach(doc => {
+        function loadOrders() {
+            db.collection('orders').orderBy('orderNumber').onSnapshot((snapshot) => {
+                ordersTable.innerHTML = '';
+                totalAmount = 0;
+                itemCount = {};
+                snapshot.forEach((doc) => {
                     const order = doc.data();
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
                         <td>${order.orderNumber}</td>
                         <td>${order.tableNumber}</td>
-                        <td>${formatDate(order.time.toDate())}</td>
-                        <td>${Object.entries(order.orders).map(([name, { quantity }]) => `${name} ${quantity}개`).join(', ')}</td>
-                        <td>${formatPrice(order.totalPrice)}</td>
+                        <td>${formatDate(order.time)}</td>
+                        <td>${Object.keys(order.orders).map(item => `${item} ${order.orders[item].quantity}개`).join(', ')}</td>
+                        <td>${order.totalPrice}원</td>
                     `;
-                    ordersTable.appendChild(row);
-                    totalRevenue += order.totalPrice;
-                    totalItemsSold += Object.values(order.orders).reduce((sum, { quantity }) => sum + quantity, 0);
+                    ordersTable.appendChild(tr);
+                    totalAmount += order.totalPrice;
+                    
+                    for (const item in order.orders) {
+                        if (itemCount[item]) {
+                            itemCount[item] += order.orders[item].quantity;
+                        } else {
+                            itemCount[item] = order.orders[item].quantity;
+                        }
+                    }
                 });
-                totalRevenueElement.textContent = `총 매출: ${formatPrice(totalRevenue)}`;
-                totalItemsSoldElement.textContent = `총 판매량: ${totalItemsSold}개`;
+                totalSales.innerHTML = `<h3>총 매출: ${totalAmount.toLocaleString()}원</h3>`;
+                displayItemStats();
             });
         }
 
-        updateTable();
+        function displayItemStats() {
+            itemStats.innerHTML = '<h3>메뉴 판매 통계</h3><ul>';
+            for (const item in itemCount) {
+                itemStats.innerHTML += `<li>${item}: ${itemCount[item]}개</li>`;
+            }
+            itemStats.innerHTML += '</ul>';
+        }
+
+        function resetOrders() {
+            if (confirm('모든 주문을 초기화하시겠습니까?')) {
+                db.collection('orders').get().then(snapshot => {
+                    snapshot.forEach(doc => {
+                        db.collection('orders').doc(doc.id).delete();
+                    });
+                });
+            }
+        }
+
+        loadOrders();
     </script>
 </body>
 </html>
