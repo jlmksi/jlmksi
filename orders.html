@@ -101,22 +101,8 @@
     <div class="total-price" id="totalRevenue">총 매출: 0원</div>
     <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore-compat.js"></script>
+    <script src="path/to/firebase-config.js"></script>
     <script>
-        // Firebase 설정
-        const firebaseConfig = {
-            apiKey: "AIzaSyCtRN3QMnHxLQEKAAn0y3q8qRvjDs8BKJA",
-            authDomain: "restaurant-orders-new.firebaseapp.com",
-            projectId: "restaurant-orders-new",
-            storageBucket: "restaurant-orders-new.appspot.com",
-            messagingSenderId: "500015809437",
-            appId: "1:500015809437:web:49d6b18dbea33114d06574",
-            measurementId: "G-79XGTK3L3F"
-        };
-
-        // Firebase 초기화
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-
         const ordersBody = document.getElementById('ordersBody');
         const totalRevenueElement = document.getElementById('totalRevenue');
         let totalRevenue = 0;
@@ -131,11 +117,11 @@
         }
 
         function loadOrders() {
-            db.collection('orders').orderBy('orderNumber').get().then((querySnapshot) => {
+            db.collection('orders').orderBy('orderNumber').onSnapshot((snapshot) => {
                 ordersBody.innerHTML = '';
                 totalRevenue = 0;
 
-                querySnapshot.forEach((doc) => {
+                snapshot.forEach((doc) => {
                     const order = doc.data();
                     const row = document.createElement('tr');
                     const orderTime = formatDate(order.time.toDate());
