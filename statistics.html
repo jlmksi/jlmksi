@@ -33,17 +33,13 @@
         th {
             background-color: #f4f4f4;
         }
-        .reset-button {
-            background-color: white;
-            color: red;
-            border: 1px solid red;
+        .cancel-button {
+            background-color: red;
+            color: white;
+            border: none;
             padding: 0.5em 1em;
             cursor: pointer;
             border-radius: 5px;
-            margin-top: 10px;
-            position: absolute;
-            top: 60px;
-            right: 10px;
         }
         .home-link {
             background-color: #4CAF50;
@@ -75,62 +71,89 @@
     <header>
         <h1>주문 통계</h1>
         <a href="index.html" class="home-link">🏠</a>
-        <button class="reset-button" onclick="resetOrders()">주문 초기화</button>
     </header>
     <table>
         <thead>
             <tr>
-                <th>메뉴</th>
-                <th>판매량</th>
-                <th>총 매출</th>
+                <th>주문 번호</th>
+                <th>테이블 번호</th>
+                <th>주문 시간</th>
+                <th>주문 내용</th>
+                <th>총 금액</th>
+                <th>주문 취소</th>
             </tr>
         </thead>
         <tbody id="statisticsBody"></tbody>
     </table>
     <div class="total-price" id="totalRevenue">총 매출: 0원</div>
+    <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore-compat.js"></script>
     <script>
+        // Firebase 설정
+        const firebaseConfig = {
+            apiKey: "AIzaSyCtRN3QMnHxLQEKAAn0y3q8qRvjDs8BKJA",
+            authDomain: "restaurant-orders-new.firebaseapp.com",
+            projectId: "restaurant-orders-new",
+            storageBucket: "restaurant-orders-new.appspot.com",
+            messagingSenderId: "500015809437",
+            appId: "1:500015809437:web:49d6b18dbea33114d06574",
+            measurementId: "G-79XGTK3L3F"
+        };
+
+        // Firebase 초기화
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        const statisticsBody = document.getElementById('statisticsBody');
+        const totalRevenueElement = document.getElementById('totalRevenue');
+        let totalRevenue = 0;
+
         function formatPrice(price) {
             return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';
         }
 
-        function loadStatistics() {
-            const statisticsBody = document.getElementById('statisticsBody');
-            const totalRevenueElement = document.getElementById('totalRevenue');
-            let savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
-            let menuStatistics = {};
-            let totalRevenue = 0;
-
-            savedOrders.forEach(order => {
-                for (const item in order.orders) {
-                    if (!menuStatistics[item]) {
-                        menuStatistics[item] = { quantity: 0, revenue: 0 };
-                    }
-                    menuStatistics[item].quantity += order.orders[item].quantity;
-                    menuStatistics[item].revenue += order.orders[item].quantity * order.orders[item].price;
-                }
-                totalRevenue += order.totalPrice;
-            });
-
-            statisticsBody.innerHTML = '';
-            for (const menuItem in menuStatistics) {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${menuItem}</td>
-                    <td>${menuStatistics[menuItem].quantity}</td>
-                    <td>${formatPrice(menuStatistics[menuItem].revenue)}</td>
-                `;
-                statisticsBody.appendChild(row);
-            }
-
-            totalRevenueElement.textContent = `총 매출: ${formatPrice(totalRevenue)}`;
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
         }
 
-        function resetOrders() {
-            if (confirm('모든 주문을 초기화하시겠습니까?')) {
-                localStorage.removeItem('savedOrders');
-                localStorage.removeItem('orders');
-                loadStatistics();
-                alert('주문이 초기화되었습니다');
+        function loadStatistics() {
+            db.collection('orders').get().then(querySnapshot => {
+                statisticsBody.innerHTML = '';
+                totalRevenue = 0;
+                querySnapshot.forEach((doc, index) => {
+                    const order = doc.data();
+                    const row = document.createElement('tr');
+                    const orderTime = formatDate(order.time.toDate());
+                    let orderDetails = '';
+                    for (const item in order.orders) {
+                        orderDetails += `${item} ${order.orders[item].quantity}개<br>`;
+                    }
+                    row.innerHTML = `
+                        <td>${index + 1}</td>
+                        <td>${order.tableNumber}</td>
+                        <td>${orderTime}</td>
+                        <td>${orderDetails}</td>
+                        <td>${formatPrice(order.totalPrice)}</td>
+                        <td><button class="cancel-button" onclick="cancelOrder('${doc.id}', ${index})">취소</button></td>
+                    `;
+                    statisticsBody.appendChild(row);
+                    totalRevenue += order.totalPrice;
+                });
+                totalRevenueElement.textContent = `총 매출: ${formatPrice(totalRevenue)}`;
+            });
+        }
+
+        function cancelOrder(orderId, rowIndex) {
+            if (confirm('이 주문을 취소하시겠습니까?')) {
+                db.collection('orders').doc(orderId).delete().then(() => {
+                    console.log('Order deleted from Firestore');
+                    document.getElementById('statisticsBody').deleteRow(rowIndex);
+                    alert('주문이 취소되었습니다');
+                    loadStatistics(); // Reload statistics to update the total revenue
+                }).catch((error) => {
+                    console.error('Error deleting order: ', error);
+                });
             }
         }
 
