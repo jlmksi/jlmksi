@@ -129,4 +129,33 @@
                     const order = change.doc.data();
                     renderOrder(order, change.doc.id);
                     notificationSound.play().catch(error => {
-                        con
+                        console.error('Audio play failed: ', error);
+                    });
+                    alert('주문이 들어왔습니다');
+                    addedOrders.add(change.doc.id);
+                }
+                if (change.type === 'removed') {
+                    const orderItem = document.getElementById(`order-${change.doc.id}`);
+                    if (orderItem) {
+                        orderItem.remove();
+                    }
+                }
+            });
+        });
+
+        function loadOrders() {
+            db.collection('orders').get().then(querySnapshot => {
+                orderList.innerHTML = ''; // Clear existing orders
+                addedOrders.clear(); // Clear the set
+                querySnapshot.forEach(doc => {
+                    const order = doc.data();
+                    renderOrder(order, doc.id);
+                    addedOrders.add(doc.id);
+                });
+            });
+        }
+
+        loadOrders();
+    </script>
+</body>
+</html>
