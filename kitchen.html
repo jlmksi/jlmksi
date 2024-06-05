@@ -96,7 +96,6 @@
         const orderListElement = document.getElementById('orderList');
         const alertMessageElement = document.getElementById('alertMessage');
         const notificationSound = document.getElementById('notificationSound');
-        let lastOrderTimestamp = null;
 
         function playNotificationSound() {
             notificationSound.play().catch(error => {
@@ -121,39 +120,29 @@
                 <p class="order-time">${new Date(order.time.seconds * 1000).toLocaleString()}</p>
                 <p class="table-number">테이블 번호: ${order.tableNumber}</p>
                 <p class="menu">${Object.keys(order.orders).map(key => `${key} ${order.orders[key].quantity}개`).join('<br>')}</p>
-                <button class="complete-button" onclick="completeOrder('${order.id}')">완료</button>
+                <button class="complete-button" onclick="markOrderAsComplete('${order.id}')">완료</button>
             `;
             orderListElement.appendChild(orderElement);
         }
 
-        function completeOrder(orderId) {
-            if (confirm('이 주문을 완료하시겠습니까?')) {
-                db.collection('orders').doc(orderId).delete().then(() => {
-                    document.getElementById(orderId).remove();
-                    showAlert('주문이 완료되었습니다.');
-                }).catch(error => {
-                    console.error('Error removing document: ', error);
-                });
-            }
+        function markOrderAsComplete(orderId) {
+            document.getElementById(orderId).remove();
+            showAlert('주문이 완료되었습니다.');
         }
 
         function loadOrders() {
             db.collection('orders').orderBy('orderNumber').onSnapshot((snapshot) => {
-                const newOrders = [];
+                orderListElement.innerHTML = '';
                 snapshot.docChanges().forEach((change) => {
                     if (change.type === "added") {
                         const order = { id: change.doc.id, ...change.doc.data() };
-                        newOrders.push(order);
                         renderOrder(order);
+                        playNotificationSound();
+                        showAlert('주문이 들어왔습니다');
                     } else if (change.type === "removed") {
                         document.getElementById(change.doc.id).remove();
                     }
                 });
-
-                if (newOrders.length > 0) {
-                    playNotificationSound();
-                    showAlert('주문이 들어왔습니다');
-                }
             }, error => {
                 console.error("Error loading orders: ", error);
             });
