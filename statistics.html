@@ -80,11 +80,9 @@
     <table>
         <thead>
             <tr>
-                <th>주문 번호</th>
-                <th>테이블 번호</th>
-                <th>주문 시간</th>
-                <th>주문 내용</th>
-                <th>총 금액</th>
+                <th>메뉴</th>
+                <th>판매량</th>
+                <th>총 매출</th>
             </tr>
         </thead>
         <tbody id="statisticsBody"></tbody>
@@ -95,38 +93,34 @@
             return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';
         }
 
-        function formatDate(dateString) {
-            const date = new Date(dateString);
-            return date.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
-        }
-
         function loadStatistics() {
             const statisticsBody = document.getElementById('statisticsBody');
             const totalRevenueElement = document.getElementById('totalRevenue');
             let savedOrders = JSON.parse(localStorage.getItem('savedOrders')) || [];
+            let menuStatistics = {};
             let totalRevenue = 0;
 
-            statisticsBody.innerHTML = '';
-            savedOrders.forEach((order, index) => {
-                if (!order.tableNumber || !order.totalPrice || isNaN(order.totalPrice)) {
-                    return; // 잘못된 데이터 건너뜀
-                }
-                const row = document.createElement('tr');
-                const orderTime = formatDate(order.time || new Date());
-                let orderDetails = '';
+            savedOrders.forEach(order => {
                 for (const item in order.orders) {
-                    orderDetails += `${item} ${order.orders[item].quantity}개<br>`;
+                    if (!menuStatistics[item]) {
+                        menuStatistics[item] = { quantity: 0, revenue: 0 };
+                    }
+                    menuStatistics[item].quantity += order.orders[item].quantity;
+                    menuStatistics[item].revenue += order.orders[item].quantity * order.orders[item].price;
                 }
-                row.innerHTML = `
-                    <td>${index + 1}</td>
-                    <td>${order.tableNumber}</td>
-                    <td>${orderTime}</td>
-                    <td>${orderDetails}</td>
-                    <td>${formatPrice(order.totalPrice)}</td>
-                `;
-                statisticsBody.appendChild(row);
                 totalRevenue += order.totalPrice;
             });
+
+            statisticsBody.innerHTML = '';
+            for (const menuItem in menuStatistics) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${menuItem}</td>
+                    <td>${menuStatistics[menuItem].quantity}</td>
+                    <td>${formatPrice(menuStatistics[menuItem].revenue)}</td>
+                `;
+                statisticsBody.appendChild(row);
+            }
 
             totalRevenueElement.textContent = `총 매출: ${formatPrice(totalRevenue)}`;
         }
