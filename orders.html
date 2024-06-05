@@ -106,6 +106,7 @@
         const ordersBody = document.getElementById('ordersBody');
         const totalRevenueElement = document.getElementById('totalRevenue');
         let totalRevenue = 0;
+        let unsubscribe = null;
 
         function formatPrice(price) {
             return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';
@@ -117,7 +118,10 @@
         }
 
         function loadOrders() {
-            db.collection('orders').orderBy('orderNumber').onSnapshot((snapshot) => {
+            if (unsubscribe) {
+                unsubscribe();
+            }
+            unsubscribe = db.collection('orders').orderBy('orderNumber').onSnapshot((snapshot) => {
                 ordersBody.innerHTML = '';
                 totalRevenue = 0;
 
@@ -159,11 +163,16 @@
         function resetOrders() {
             if (confirm('모든 주문을 초기화하시겠습니까?')) {
                 db.collection('orders').get().then((querySnapshot) => {
+                    const batch = db.batch();
                     querySnapshot.forEach((doc) => {
-                        doc.ref.delete();
+                        batch.delete(doc.ref);
                     });
-                    loadOrders();
-                    alert('주문이 초기화되었습니다');
+                    batch.commit().then(() => {
+                        loadOrders();
+                        alert('주문이 초기화되었습니다');
+                    }).catch((error) => {
+                        console.error('Error resetting orders: ', error);
+                    });
                 });
             }
         }
